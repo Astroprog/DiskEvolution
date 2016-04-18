@@ -17,9 +17,11 @@ public:
 
     int NGrid;
     int frame;
+    int maxFrames;
     int frameStride;
     double dx;
     double dt;
+    double year = 3.15e7;
     GridGeometry *g;
     Point *data;
 
@@ -28,10 +30,9 @@ public:
     virtual ~Simulation();
     virtual void writeFrame();
     virtual void setGeometry(GridGeometry *geometry);
-    virtual void setFrameStride(int stride);
+    virtual void setNumberOfFrames(int NFrames);
     virtual void computedx();
     virtual void computedt() = 0;
-    virtual void runSimulation(int years);
     virtual void step() = 0;
 
 

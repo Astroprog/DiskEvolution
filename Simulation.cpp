@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <iterator>
+#include <cmath>
 
 void Simulation::writeFrame()
 {
@@ -36,7 +37,7 @@ Simulation::Simulation()
 {
     NGrid = 2;
     frame = 0;
-    frameStride = 1;
+    maxFrames = 100;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 
@@ -44,7 +45,7 @@ Simulation::Simulation(int ncells)
 {
     NGrid = ncells;
     frame = 0;
-    frameStride = 1;
+    maxFrames = 100;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 
@@ -59,9 +60,9 @@ void Simulation::setGeometry(GridGeometry *geometry)
     g = geometry;
 }
 
-void Simulation::setFrameStride(int stride)
+void Simulation::setNumberOfFrames(int NFrames)
 {
-    frameStride = stride;
+    maxFrames = NFrames;
 }
 
 void Simulation::computedx()
@@ -74,12 +75,5 @@ void Simulation::computedx()
                 dx = temp;
             }
         }
-    }
-}
-
-void Simulation::runSimulation(int steps)
-{
-    for (int i = 0; i < steps; i++) {
-        step();
     }
 }

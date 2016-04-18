@@ -16,7 +16,7 @@ int main()
     GridGeometry *g = new GridGeometry(0.1, 1000, 200, true);
     ViscousDisk *disk = new ViscousDisk(NGrid);
     disk->setParameters(0.01, 1e33);
-    disk->setFrameStride(3000);
+    disk->setNumberOfFrames(1000);
     disk->setGeometry(g);
     disk->initWithDensityDistribution(500.0, 100);
     disk->computedx();

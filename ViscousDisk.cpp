@@ -116,20 +116,28 @@ void ViscousDisk::initWithDensityDistribution(double densityAt1Au, double cutoff
 
 void ViscousDisk::computedt()
 {
-    double D = pow(data[0].x, s+1);
-    for (int i = 0; i < NGrid; i++) {
-        double temp = pow(data[i].x, s+1);
-        if (temp > D) {
-            D = temp;
+    double x = data[1].x - data[0].x;
+    double c = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
+    dt = 0.25 * x/c;
+
+    for (int i = 2; i < NGrid; i++) {
+        x = pow((data[i].x - data[i-1].x), 1.5);
+        double temp = 0.25 * x / c;
+        if (temp < dt) {
+            dt = temp;
         }
     }
 
-    dt = year / 3;
+    std::cout << "Timestep: " << dt << std::endl;
+   // dt = year / 3;
 }
 
 
 void ViscousDisk::runSimulation(int years)
 {
+    double NSteps = (double)years * year / dt;
+    frameStride = (int)(NSteps / (double)maxFrames);
+
     for (int i = 0; dt/year * i < years; i++) {
         step();
     }

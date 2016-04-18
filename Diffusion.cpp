@@ -12,7 +12,7 @@ Diffusion::Diffusion()
 {
     NGrid = 2;
     frame = 0;
-    frameStride = 1;
+    maxFrames = 1;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 
@@ -20,7 +20,7 @@ Diffusion::Diffusion(int ncells)
 {
     NGrid = ncells;
     frame = 0;
-    frameStride = 1;
+    maxFrames = 1;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 

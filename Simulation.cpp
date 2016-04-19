@@ -12,20 +12,19 @@
 
 void Simulation::writeFrame()
 {
-    std::cout << "Writing frame " << frame / frameStride << " (step " << frame << ")" << std::endl;
+    std::cout << "Writing frame " << frame / frameStride << " (step " << frame << ", " << dt/year * frame << "yr)" << std::endl;
     std::vector<std::string> stringOutput;
-//    double sum = 0.0;
-    for(int i = 0; i < NGrid; i++)
+
+    std::stringstream headerStream;
+    headerStream << dt/year * frame;
+    stringOutput.push_back(headerStream.str());
+
+    for (int i = 0; i < NGrid; i++)
     {
         std::stringstream ss;
-        ss << data[i].x << " " << data[i].y;
+        ss << data[i].x << " " << data[i].y / data[i].x;
         stringOutput.push_back(ss.str());
-//        if (i > 0) {
-//            sum += (data[i].x - data[i - 1].x) * data[i].y;
-//        }
     }
-
-
     std::ostringstream tempStream;
     tempStream << "frame" << frame / frameStride << ".dat";
     std::ofstream outputFile(tempStream.str());

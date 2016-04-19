@@ -17,6 +17,7 @@ ViscousDisk::ViscousDisk()
     NGrid = 2;
     frame = 0;
     frameStride = 1;
+    startingTime = 0.0;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 
@@ -25,26 +26,10 @@ ViscousDisk::ViscousDisk(int ncells)
     NGrid = ncells;
     frame = 0;
     frameStride = 1;
+    startingTime = 0.0;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 
-void ViscousDisk::writeFrame()
-{
-    std::cout << "Writing frame " << frame / frameStride << " (step " << frame << ", " << dt/year * frame << "yr)" << std::endl;
-    std::vector<std::string> stringOutput;
-
-    for(int i = 0; i < NGrid; i++)
-    {
-        std::stringstream ss;
-        ss << data[i].x << " " << data[i].y / data[i].x;
-        stringOutput.push_back(ss.str());
-    }
-    std::ostringstream tempStream;
-    tempStream << "frame" << frame / frameStride << ".dat";
-    std::ofstream outputFile(tempStream.str());
-    std::ostream_iterator<std::string> output_iterator(outputFile, "\n");
-    std::copy(stringOutput.begin(), stringOutput.end(), output_iterator);
-}
 
 
 void ViscousDisk::step()
@@ -114,6 +99,39 @@ void ViscousDisk::initWithDensityDistribution(double densityAt1Au, double cutoff
     writeFrame();
 }
 
+void ViscousDisk::initWithRestartData(int lastFrame)
+{
+    std::cout << "Initializing with frame " << lastFrame << std::endl;
+    std::stringstream fileStream;
+    fileStream << "frame" << lastFrame << ".dat";
+    std::ifstream input(fileStream.str());
+
+    std::string line;
+    int i = 0;
+    while (std::getline(input, line))
+    {
+        std::istringstream iss(line);
+        if (i == 0) {
+            if(!(iss >> startingTime)) {
+                std::cout << "Error while parsing restart file (first line)" << std::endl;
+                break;
+            }
+            i++;
+            std::cout << startingTime << std::endl;
+        } else {
+            if (!(iss >> data[i-1].x >> data[i-1].y))
+            {
+                std::cout << "Error while parsing restart file" << std::endl;
+                break;
+            } else {
+                data[i-1].y *= data[i-1].x;
+            }
+//            std::cout << i << ": data[i-1].x = " << data[i-1].x << ", data[i-1].y = " << data[i-1].y << std::endl;
+            i++;
+        }
+    }
+}
+
 void ViscousDisk::computedt()
 {
     double x = data[1].x - data[0].x;
@@ -129,9 +147,20 @@ void ViscousDisk::computedt()
     }
 
     std::cout << "Timestep: " << dt << std::endl;
-   // dt = year / 3;
 }
 
+
+void ViscousDisk::restartSimulation(int lastFrame, int years)
+{
+    double NSteps = (double)years * year / dt;
+    frameStride = (int)(NSteps / (double)maxFrames);
+
+    frame = lastFrame * frameStride;
+
+    for (int i = 0; dt/year * i < years; i++) {
+        step();
+    }
+}
 
 void ViscousDisk::runSimulation(int years)
 {

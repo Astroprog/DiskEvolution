@@ -19,6 +19,7 @@ public:
     int frame;
     int maxFrames;
     int frameStride;
+    double startingTime;
     double dx;
     double dt;
     double year = 3.15e7;
@@ -34,7 +35,6 @@ public:
     virtual void computedx();
     virtual void computedt() = 0;
     virtual void step() = 0;
-
 
 
 };

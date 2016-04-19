@@ -43,8 +43,7 @@ void DiskWind::step()
     double c = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
 
     for (int i = 0; i < NGrid; i++) {
-        double densityLoss = massLossAtRadius(data[i].x, 5.0) / (au * au * data[i].x * (data[i + 1].x - data[i].x)) * data[i].x / year;
-//        std::cout << "Densityloss: " << densityLoss << std::endl;
+        double densityLoss = massLossAtRadius(data[i].x, 5.0) / (au * au * data[i].x * (g->convertIndexToPosition(i + 0.5) - g->convertIndexToPosition(i - 0.5))) * data[i].x / year;
         tempData[i] = data[i].y - dt * (c / (g->convertIndexToPosition(i + 0.5) - g->convertIndexToPosition(i - 0.5)) * computeFluxDiff(i) + densityLoss);
     }
 

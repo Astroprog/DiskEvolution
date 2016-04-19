@@ -9,11 +9,13 @@
 
 class DiskWind : public ViscousDisk {
 
+public:
+
     DiskWind();
     DiskWind(int ncells);
 
     virtual void step();
-    virtual double massLossAtRadius(double r);
+    virtual double massLossAtRadius(double r, double rg);
 
 };
 

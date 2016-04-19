@@ -1,4 +1,4 @@
-#include "ViscousDisk.h"
+#include "DiskWind.h"
 
 
 int main()
@@ -13,12 +13,12 @@ int main()
 //    diffusion->computedt();
 //    diffusion->runSimulation(500000);
 
-    GridGeometry *g = new GridGeometry(0.1, 1000, 200, true);
-    ViscousDisk *disk = new ViscousDisk(NGrid);
-    disk->setParameters(0.01, 1e33);
+    GridGeometry *g = new GridGeometry(0.1, 100, 200, true);
+    DiskWind *disk = new DiskWind(NGrid);
+    disk->setParameters(0.01, 2e33);
     disk->setNumberOfFrames(1000);
     disk->setGeometry(g);
-    disk->initWithDensityDistribution(500.0, 100);
+    disk->initWithDensityDistribution(500.0, 20);
     disk->computedx();
     disk->computedt();
     disk->runSimulation(1000000);

@@ -5,6 +5,7 @@
 #include "DiskWind.h"
 #include <cstdlib>
 #include <cmath>
+#include <iostream>
 
 
 
@@ -24,9 +25,14 @@ DiskWind::DiskWind(int ncells)
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 
-double DiskWind::massLossAtRadius(double r)
+double DiskWind::massLossAtRadius(double r, double rg)
 {
-
+    double rate = 1e25;
+    if (r >= rg) {
+        return rate * pow(r, -2.5);
+    } else {
+        return 0.0;
+    }
 }
 
 
@@ -37,7 +43,9 @@ void DiskWind::step()
     double c = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
 
     for (int i = 0; i < NGrid; i++) {
-        tempData[i] = data[i].y - c * dt / (g->convertIndexToPosition(i + 0.5) - g->convertIndexToPosition(i - 0.5)) * computeFluxDiff(i);
+        double densityLoss = massLossAtRadius(data[i].x, 5.0) / (au * au * data[i].x * (data[i + 1].x - data[i].x)) * data[i].x / year;
+//        std::cout << "Densityloss: " << densityLoss << std::endl;
+        tempData[i] = data[i].y - dt * (c / (g->convertIndexToPosition(i + 0.5) - g->convertIndexToPosition(i - 0.5)) * computeFluxDiff(i) + densityLoss);
     }
 
     for (int i = 0; i < NGrid; i++) {

@@ -26,9 +26,9 @@ public:
     virtual double computeFluxDiff(int i);
     virtual void computedt();
     virtual void writeFrame();
-    void runSimulation(int years);
-    void setParameters(double a, double mass);
-    void initWithDensityDistribution(double densityAt1Au, double cutoff);
+    virtual void runSimulation(int years);
+    virtual void setParameters(double a, double mass);
+    virtual void initWithDensityDistribution(double densityAt1Au, double cutoff);
 };
 
 

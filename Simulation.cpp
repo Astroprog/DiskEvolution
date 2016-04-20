@@ -12,11 +12,11 @@
 
 void Simulation::writeFrame()
 {
-    std::cout << "Writing frame " << frame / frameStride << " (step " << frame << ", " << dt/year * frame << "yr)" << std::endl;
+    std::cout << "Writing frame " << outputFrame << " (step " << frame << ", " << dt/year * frame << "yr)" << std::endl;
     std::vector<std::string> stringOutput;
 
     std::stringstream headerStream;
-    headerStream << dt/year * frame;
+    headerStream << frame;
     stringOutput.push_back(headerStream.str());
 
     for (int i = 0; i < NGrid; i++)
@@ -26,10 +26,11 @@ void Simulation::writeFrame()
         stringOutput.push_back(ss.str());
     }
     std::ostringstream tempStream;
-    tempStream << "frame" << frame / frameStride << ".dat";
+    tempStream << "frame" << outputFrame << ".dat";
     std::ofstream outputFile(tempStream.str());
     std::ostream_iterator<std::string> output_iterator(outputFile, "\n");
     std::copy(stringOutput.begin(), stringOutput.end(), output_iterator);
+    outputFrame++;
 }
 
 Simulation::Simulation()

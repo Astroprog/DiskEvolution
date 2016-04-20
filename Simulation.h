@@ -19,7 +19,8 @@ public:
     int frame;
     int maxFrames;
     int frameStride;
-    double startingTime;
+    int outputFrame;
+    int lastFrameDetail;
     double dx;
     double dt;
     double year = 3.15e7;

@@ -14,6 +14,7 @@ DiskWind::DiskWind()
     NGrid = 2;
     frame = 0;
     frameStride = 1;
+    outputFrame = 0;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 
@@ -22,6 +23,7 @@ DiskWind::DiskWind(int ncells)
     NGrid = ncells;
     frame = 0;
     frameStride = 1;
+    outputFrame = 0;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 

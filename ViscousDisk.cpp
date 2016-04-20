@@ -17,7 +17,6 @@ ViscousDisk::ViscousDisk()
     NGrid = 2;
     frame = 0;
     frameStride = 1;
-    startingTime = 0.0;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 
@@ -26,7 +25,6 @@ ViscousDisk::ViscousDisk(int ncells)
     NGrid = ncells;
     frame = 0;
     frameStride = 1;
-    startingTime = 0.0;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 
@@ -112,12 +110,11 @@ void ViscousDisk::initWithRestartData(int lastFrame)
     {
         std::istringstream iss(line);
         if (i == 0) {
-            if(!(iss >> startingTime)) {
+            if(!(iss >> lastFrameDetail)) {
                 std::cout << "Error while parsing restart file (first line)" << std::endl;
                 break;
             }
             i++;
-            std::cout << startingTime << std::endl;
         } else {
             if (!(iss >> data[i-1].x >> data[i-1].y))
             {
@@ -155,7 +152,8 @@ void ViscousDisk::restartSimulation(int lastFrame, int years)
     double NSteps = (double)years * year / dt;
     frameStride = (int)(NSteps / (double)maxFrames);
 
-    frame = lastFrame * frameStride;
+    frame = lastFrameDetail;
+    outputFrame = lastFrame + 1;
 
     for (int i = 0; dt/year * i < years; i++) {
         step();

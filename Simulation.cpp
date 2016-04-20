@@ -22,7 +22,7 @@ void Simulation::writeFrame()
     for (int i = 0; i < NGrid; i++)
     {
         std::stringstream ss;
-        ss << data[i].x << " " << data[i].y / data[i].x;
+        ss << data[i].x << " " << data[i].y / data[i].x << " " << data[i].mdot;
         stringOutput.push_back(ss.str());
     }
     std::ostringstream tempStream;

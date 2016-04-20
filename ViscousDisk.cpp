@@ -92,6 +92,7 @@ void ViscousDisk::initWithDensityDistribution(double densityAt1Au, double cutoff
     for (int i = 0; i < NGrid; i++) {
         data[i].x = g->convertIndexToPosition(i);
         data[i].y = densityAt1Au * exp(-data[i].x / cutoff);
+        data[i].mdot = 0.0;
     }
 
     writeFrame();
@@ -122,6 +123,7 @@ void ViscousDisk::initWithRestartData(int lastFrame)
                 break;
             } else {
                 data[i-1].y *= data[i-1].x;
+                data[i-1].mdot = 0.0;
             }
 //            std::cout << i << ": data[i-1].x = " << data[i-1].x << ", data[i-1].y = " << data[i-1].y << std::endl;
             i++;
@@ -133,7 +135,7 @@ void ViscousDisk::computedt()
 {
     double x = data[1].x - data[0].x;
     double c = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
-    dt = 0.25 * x/c;
+    dt = 0.25 * pow(x, 1.5)/c;
 
     for (int i = 2; i < NGrid; i++) {
         x = pow((data[i].x - data[i-1].x), 1.5);

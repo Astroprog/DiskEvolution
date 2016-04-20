@@ -4,7 +4,7 @@
 int main()
 {
     int NGrid = 200;
-    bool restart = true;
+    bool restart = false;
 
     GridGeometry *g = new GridGeometry(0.1, 1000, 200, true);
     DiskWind *disk = new DiskWind(NGrid);
@@ -13,7 +13,7 @@ int main()
     disk->setGeometry(g);
 
     if (restart) {
-        disk->initWithRestartData(10);
+        disk->initWithRestartData(455);
     } else {
         disk->initWithDensityDistribution(500.0, 100);
     }
@@ -22,9 +22,9 @@ int main()
     disk->computedt();
 
     if (restart) {
-        disk->restartSimulation(10, 10000);
+        disk->restartSimulation(455, 100000);
     } else {
-        disk->runSimulation(10000);
+        disk->runSimulation(1000000);
     }
 
     return 0;

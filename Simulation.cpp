@@ -16,7 +16,7 @@ void Simulation::writeFrame()
     std::vector<std::string> stringOutput;
 
     std::stringstream headerStream;
-    headerStream << frame;
+    headerStream << frame << " " << dt/year * frame;
     stringOutput.push_back(headerStream.str());
 
     for (int i = 0; i < NGrid; i++)

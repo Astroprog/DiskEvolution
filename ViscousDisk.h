@@ -10,15 +10,6 @@
 class ViscousDisk : public Diffusion {
 public:
 
-    double alpha;
-    double au = 1.5e13;
-    double G = 6.67e-8;
-    double M;
-    double kb = 1.38e-16;
-    double mp = 1.67e-24;
-    double T0 = 280;
-    double s = -0.5;
-
     ViscousDisk();
     ViscousDisk(int ncells);
 

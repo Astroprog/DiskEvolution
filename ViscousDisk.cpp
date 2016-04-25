@@ -17,6 +17,7 @@ ViscousDisk::ViscousDisk()
     NGrid = 2;
     frame = 0;
     frameStride = 1;
+    currentTime = 0.0;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 
@@ -25,6 +26,7 @@ ViscousDisk::ViscousDisk(int ncells)
     NGrid = ncells;
     frame = 0;
     frameStride = 1;
+    currentTime = 0.0;
     data = (Point *)malloc(NGrid * sizeof(Point));
 }
 
@@ -74,8 +76,8 @@ double ViscousDisk::computeFluxDiff(int i)
         yPlus = 0.0;
     }
 
-    Fright = -sqrt(rPlusHalf) * (0.5 * (y + yPlus) * (s+1)*pow(rPlusHalf, s) + pow(rPlusHalf, s+1) * (yPlus - y) / (rPlus - r));
-    Fleft = -sqrt(rMinusHalf) * (0.5 * (y + yMinus) * (s+1)*pow(rMinusHalf, s) + pow(rMinusHalf, s+1) * (y - yMinus) / (r - rMinus));
+    Fright = -0.25 * (y + yPlus) - rPlusHalf * (yPlus - y) / (rPlus - r);
+    Fleft = -0.25 * (y + yMinus) - rMinusHalf * (y - yMinus) / (r - rMinus);
     return Fright - Fleft;
 }
 
@@ -111,7 +113,7 @@ void ViscousDisk::initWithRestartData(int lastFrame)
     {
         std::istringstream iss(line);
         if (i == 0) {
-            if(!(iss >> lastFrameDetail)) {
+            if(!(iss >> lastFrameDetail >> currentTime)) {
                 std::cout << "Error while parsing restart file (first line)" << std::endl;
                 break;
             }

@@ -33,12 +33,3 @@ GridGeometry::GridGeometry(double innerBound, double outerBound, int NCells, boo
 }
 
 
-double GridGeometry::convertIndexToPosition(double i)
-{
-    if (logscale) {
-        return pow(10, scaleFactor * i + offset);
-    } else {
-        return i * scaleFactor + offset;
-    }
-}
-

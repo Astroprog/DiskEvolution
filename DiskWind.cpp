@@ -46,8 +46,7 @@ void DiskWind::step()
 
     for (int i = 0; i < NGrid; i++) {
         double fluxDiff = computeFluxDiff(i);
-        double iRoot = sqrt(data[i].x);
-        data[i].mdot = 2 * M_PI * c * sqrt(au) * au * year / M * iRoot * (0.5 * data[i].y / iRoot + iRoot * ((data[i+1].y - data[i].y)/2 - (data[i].y - data[i-1].y)/2)/(g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5)));
+        data[i].mdot = 2 * M_PI * c * au * au * year / M * (0.5 * data[i].y + data[i].x * ((data[i+1].y - data[i].y)/2 - (data[i].y - data[i-1].y)/2)/(g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5)));
         
         double densityLoss = massLossAtRadius(data[i].x, 5.0) / (2 * M_PI * au * au * data[i].x * (g->convertIndexToPosition(i + 0.5) - g->convertIndexToPosition(i - 0.5))) * data[i].x / year;
         tempData[i] = data[i].y - dt * (c / (g->convertIndexToPosition(i + 0.5) - g->convertIndexToPosition(i - 0.5)) * fluxDiff + densityLoss);

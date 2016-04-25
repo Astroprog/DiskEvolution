@@ -16,12 +16,20 @@ public:
         double mdot;
     };
 
+    double alpha;
+    double au = 1.5e13;
+    double G = 6.67e-8;
+    double M;
+    double kb = 1.38e-16;
+    double mp = 1.67e-24;
+    double T0 = 280;
     int NGrid;
     int frame;
     int maxFrames;
     int frameStride;
     int outputFrame;
     int lastFrameDetail;
+    double currentTime;
     double dx;
     double dt;
     double year = 3.15e7;

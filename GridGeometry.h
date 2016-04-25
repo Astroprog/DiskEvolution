@@ -5,6 +5,7 @@
 #ifndef DIFFUSION_GRIDGEOMETRY_H
 #define DIFFUSION_GRIDGEOMETRY_H
 
+#include <cmath>
 
 class GridGeometry {
 private:
@@ -15,7 +16,15 @@ private:
 public:
     GridGeometry();
     GridGeometry(double innerBound, double outerBound, int NCells, bool useLogscale);
-    double convertIndexToPosition(double i);
+    double convertIndexToPosition(double i)
+    {
+        if (logscale) {
+            return pow(10, scaleFactor * i + offset);
+        } else {
+            return i * scaleFactor + offset;
+        }
+    }
+
     static double gaussian(double mu, double sigma, double x);
 };
 

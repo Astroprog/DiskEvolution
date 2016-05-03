@@ -4,9 +4,6 @@
 
 #include "DiskWind.h"
 #include <cstdlib>
-#include <cmath>
-#include <iostream>
-
 
 
 DiskWind::DiskWind()

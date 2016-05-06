@@ -15,7 +15,9 @@ public:
     DiskWind(int ncells);
 
     virtual void step();
-    virtual double massLossAtRadius(double r, double rg);
+    virtual double computeFluxDiff(int i);
+    double massLossAtRadius(double r, double rg);
+    double leverArmAtRadius(double r);
 
 };
 

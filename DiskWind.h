@@ -61,8 +61,6 @@ public:
 
     void writeFrame();
 
-
-
 };
 
 

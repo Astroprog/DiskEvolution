@@ -5,19 +5,63 @@
 #ifndef DISKEVOLUTION_DISKWIND_H
 #define DISKEVOLUTION_DISKWIND_H
 
-#include "ViscousDisk.h"
+#include "GridGeometry.h"
 
-class DiskWind : public ViscousDisk {
+class DiskWind {
+
+private:
+    struct Point {
+        double x;
+        double y;
+        double mdot;
+    };
+
+    double alpha;
+    double au = 1.5e13;
+    double G = 6.67e-8;
+    double M;
+    double kb = 1.38e-16;
+    double mp = 1.67e-24;
+    double T0 = 280;
+    int NGrid;
+    int frame;
+    int maxFrames;
+    int frameStride;
+    int outputFrame;
+    int lastFrameDetail;
+    double currentTime;
+    double dx;
+    double dt;
+    double year = 3.15e7;
+    GridGeometry *g;
+    Point *data;
 
 public:
 
     DiskWind();
     DiskWind(int ncells);
+    ~DiskWind();
 
-    virtual void step();
-    virtual double computeFluxDiff(int i);
+    void step();
+    void computedt();
+    void computedx();
+    double computeFluxDiff(int i);
+
     double massLossAtRadius(double r, double rg);
     double leverArmAtRadius(double r);
+
+    void setParameters(double a, double mass);
+    void initWithDensityDistribution(double densityAt1Au, double cutoff);
+    void setGeometry(GridGeometry *geometry);
+    void setNumberOfFrames(int NFrames);
+
+    void runSimulation(int years);
+    void restartSimulation(int lastFrame, int years);
+    void initWithRestartData(int lastFrame);
+
+    void writeFrame();
+
+
 
 };
 

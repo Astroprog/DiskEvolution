@@ -15,12 +15,7 @@ public:
 
     virtual void step();
     virtual double computeFluxDiff(int i);
-    virtual void computedt();
-    virtual void setParameters(double a, double mass);
-    virtual void runSimulation(int years);
-    virtual void restartSimulation(int lastFrame, int years);
-    virtual void initWithRestartData(int lastFrame);
-    virtual void initWithDensityDistribution(double densityAt1Au, double cutoff);
+
 };
 
 

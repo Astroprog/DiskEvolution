@@ -39,12 +39,6 @@ public:
     Simulation();
     Simulation(int ncells);
     virtual ~Simulation();
-    virtual void writeFrame();
-    virtual void setGeometry(GridGeometry *geometry);
-    virtual void setNumberOfFrames(int NFrames);
-    virtual void computedx();
-    virtual void computedt() = 0;
-    virtual void step() = 0;
 
 
 };

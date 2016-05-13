@@ -36,7 +36,7 @@ double DiskWind::massLossAtRadius(double r, double rg)
 
 double DiskWind::leverArmAtRadius(double r)
 {
-    return 1.2;
+    return 1.0;
 }
 
 double DiskWind::computeFluxDiff(int i)

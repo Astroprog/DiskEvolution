@@ -24,7 +24,7 @@ int main(int argc, char** argv)
         disk->setParameters(a, mass);
         disk->setNumberOfFrames(frames);
         disk->setGeometry(g);
-        
+
         if (restart) {
             int restartFrame = (int)pMap["restartframe"];
             disk->initWithRestartData(restartFrame);

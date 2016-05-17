@@ -109,7 +109,7 @@ double DiskWind::massLossAtRadius(double r, double rg)
 
 double DiskWind::leverArmAtRadius(double r)
 {
-    return 1.2;
+    return 1.0;
 }
 
 double DiskWind::computeFluxDiff(int i)
@@ -185,6 +185,19 @@ void DiskWind::initWithDensityDistribution(double densityAt1Au, double cutoff)
     for (int i = 0; i < NGrid; i++) {
         data[i].x = g->convertIndexToPosition(i);
         data[i].y = densityAt1Au * exp(-data[i].x / cutoff);
+        data[i].mdot = 0.0;
+    }
+
+    writeFrame();
+}
+
+void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor)
+{
+    std::cout << "Initializing grid of size " << NGrid << " with HCGA distribution" << std::endl;
+
+    for (int i = 0; i < NGrid; i++) {
+        data[i].x = g->convertIndexToPosition(i);
+        data[i].y = initialDiskMass / (2 * M_PI * au * au * radialScaleFactor * data[i].x) * exp(-data[i].x / radialScaleFactor) * data[i].x;
         data[i].mdot = 0.0;
     }
 

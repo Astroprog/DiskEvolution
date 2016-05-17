@@ -14,8 +14,10 @@ int main(int argc, char** argv)
         double rout = pMap["rout"];
         double a = pMap["a"];
         double mass = pMap["mass"];
-        double density = pMap["density"];
-        double cutoff = pMap["cutoff"];
+//        double density = pMap["density"];
+//        double cutoff = pMap["cutoff"];
+        double initialDiskMassRatio = pMap["diskmass"];
+        double radialScaleFactor = pMap["rscale"];
         int frames = (int)pMap["frames"];
         int time = (int)pMap["time"];
 
@@ -32,7 +34,8 @@ int main(int argc, char** argv)
             disk->computedt();
             disk->restartSimulation(restartFrame, time);
         } else {
-            disk->initWithDensityDistribution(density, cutoff);
+//            disk->initWithDensityDistribution(density, cutoff);
+            disk->initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor);
             disk->computedx();
             disk->computedt();
             disk->runSimulation(time);

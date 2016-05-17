@@ -52,6 +52,7 @@ public:
 
     void setParameters(double a, double mass);
     void initWithDensityDistribution(double densityAt1Au, double cutoff);
+    void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor);
     void setGeometry(GridGeometry *geometry);
     void setNumberOfFrames(int NFrames);
 

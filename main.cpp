@@ -1,46 +1,10 @@
-#include "DiskWind.h"
-#include "ParameterParser.h"
+#include "Simulation.h"
 #include <iostream>
 
 int main(int argc, char** argv)
 {
     if (argc == 2){
-        std::map<std::string, double> pMap = ParameterParser::parseFile(argv[1]);
-
-        bool restart = (bool)pMap["restart"];
-        bool logscale = (bool)pMap["logscale"];
-        int NGrid = (int)pMap["ngrid"];
-        double rin = pMap["rin"];
-        double rout = pMap["rout"];
-        double a = pMap["a"];
-        double mass = pMap["mass"];
-//        double density = pMap["density"];
-//        double cutoff = pMap["cutoff"];
-        double initialDiskMassRatio = pMap["diskmass"];
-        double radialScaleFactor = pMap["rscale"];
-        int frames = (int)pMap["frames"];
-        int time = (int)pMap["time"];
-
-        GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
-        DiskWind *disk = new DiskWind(NGrid);
-        disk->setParameters(a, mass);
-        disk->setNumberOfFrames(frames);
-        disk->setGeometry(g);
-
-        if (restart) {
-            int restartFrame = (int)pMap["restartframe"];
-            disk->initWithRestartData(restartFrame);
-            disk->computedx();
-            disk->computedt();
-            disk->restartSimulation(restartFrame, time);
-        } else {
-//            disk->initWithDensityDistribution(density, cutoff);
-            disk->initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor);
-            disk->computedx();
-            disk->computedt();
-            disk->runSimulation(time);
-        }
-
+        Simulation::runDiskDispersalAnalysis(argv[1]);
     } else {
         std::cout << "No parameter file specified" << std::endl;
     }

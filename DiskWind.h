@@ -5,6 +5,7 @@
 #ifndef DISKEVOLUTION_DISKWIND_H
 #define DISKEVOLUTION_DISKWIND_H
 
+#include <vector>
 #include "GridGeometry.h"
 
 class DiskWind {
@@ -23,6 +24,10 @@ private:
     double kb = 1.38e-16;
     double mp = 1.67e-24;
     double T0 = 280;
+    double leverArm = 1.2;
+    double floorDensity;
+    double diskMass;
+    double radialScale;
     int NGrid;
     int frame;
     int maxFrames;
@@ -49,14 +54,17 @@ public:
 
     double massLossAtRadius(double r, double rg);
     double leverArmAtRadius(double r);
+    double constantLeverArm();
+    void setLeverArm(double arm);
 
     void setParameters(double a, double mass);
     void initWithDensityDistribution(double densityAt1Au, double cutoff);
-    void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor);
+    void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor);
     void setGeometry(GridGeometry *geometry);
     void setNumberOfFrames(int NFrames);
 
     void runSimulation(int years);
+    void runDispersalAnalysis(int timeLimit, std::vector<double>* leverArms);
     void restartSimulation(int lastFrame, int years);
     void initWithRestartData(int lastFrame);
 

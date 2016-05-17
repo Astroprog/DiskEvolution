@@ -112,6 +112,16 @@ double DiskWind::leverArmAtRadius(double r)
     return 1.0;
 }
 
+double DiskWind::constantLeverArm()
+{
+    return leverArm;
+}
+
+void DiskWind::setLeverArm(double arm)
+{
+    leverArm = arm;
+}
+
 double DiskWind::computeFluxDiff(int i)
 {
     double rPlus = g->convertIndexToPosition(i + 1.0);
@@ -134,8 +144,8 @@ double DiskWind::computeFluxDiff(int i)
         yPlus = 0.0;
     }
 
-    Fright = (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r) + (leverArmAtRadius(r) - 1) * massLossAtRadius(r, 5.0) / (M_PI * au * year * (rPlus - r)) * r);
-    Fleft = (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus) + (leverArmAtRadius(r) - 1) * massLossAtRadius(r, 5.0) / (M_PI * au * year * (r - rMinus)) * r);
+    Fright = (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r) + (constantLeverArm() - 1) * massLossAtRadius(r, 5.0) / (M_PI * au * year * (rPlus - r)) * r);
+    Fleft = (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus) + (constantLeverArm() - 1) * massLossAtRadius(r, 5.0) / (M_PI * au * year * (r - rMinus)) * r);
     return Fright - Fleft;
 }
 
@@ -191,13 +201,20 @@ void DiskWind::initWithDensityDistribution(double densityAt1Au, double cutoff)
     writeFrame();
 }
 
-void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor)
+void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor)
 {
     std::cout << "Initializing grid of size " << NGrid << " with HCGA distribution" << std::endl;
+
+    floorDensity = floor;
+    radialScale = radialScaleFactor;
+    diskMass = initialDiskMass;
 
     for (int i = 0; i < NGrid; i++) {
         data[i].x = g->convertIndexToPosition(i);
         data[i].y = initialDiskMass / (2 * M_PI * au * au * radialScaleFactor * data[i].x) * exp(-data[i].x / radialScaleFactor) * data[i].x;
+        if (data[i].y / data[i].x < floorDensity) {
+            data[i].y = floorDensity * data[i].x;
+        }
         data[i].mdot = 0.0;
     }
 
@@ -220,7 +237,12 @@ void DiskWind::step()
     }
 
     for (int i = 0; i < NGrid; i++) {
-        data[i].y = tempData[i];
+        if (tempData[i] / data[i].x < floorDensity)
+        {
+            data[i].y = floorDensity * data[i].x;
+        } else {
+            data[i].y = tempData[i];
+        }
     }
 
     free(tempData);
@@ -241,6 +263,34 @@ void DiskWind::restartSimulation(int lastFrame, int years)
 
     for (int i = 0; dt/year * i < years; i++) {
         step();
+    }
+}
+
+void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArms)
+{
+    double NSteps = (double)timeLimit / 10 * year / dt;
+    frameStride = (int)(NSteps / (double)maxFrames);
+
+    for (unsigned int i = 0; i < leverArms->size(); i++) {
+        leverArm = leverArms->at(i);
+        frame = 0;
+        outputFrame = 0;
+        initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
+
+        for (int k = 0; dt/year * k < timeLimit; k++) {
+            step();
+            bool dispersed = false;
+            for (int j = 60; j < 66; j++) {
+                if (data[j].y / data[j].x <= 2*floorDensity)
+                {
+                    std::cout << "For lambda = " << leverArms->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
+                    dispersed = true;
+                }
+            }
+            if (dispersed) {
+                break;
+            }
+        }
     }
 }
 

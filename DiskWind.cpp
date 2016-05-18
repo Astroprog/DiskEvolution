@@ -97,11 +97,21 @@ void DiskWind::computedt()
     std::cout << "Timestep: " << dt << std::endl;
 }
 
-double DiskWind::massLossAtRadius(double r, double rg)
+void DiskWind::setParameters(double a, double mass, double stellarLuminosity, double rg)
 {
-    double rate = 1e25;
-    if (r >= rg) {
-        return rate * pow(r, -2.5);
+    alpha = a;
+    M = mass;
+    photoRadius = rg / au;
+    luminosity = stellarLuminosity;
+}
+
+double DiskWind::massLossAtRadius(double r)
+{
+    if (r >= photoRadius) {
+        double cPhoto = sqrt(1e4 * kb / (2.3 * mp));
+        double n0 = 5.7e4 * sqrt(luminosity / normLuminosity) * pow(photoRadius * au / 1e14, -1.5) * pow(r / photoRadius, -2.5);
+        double surfaceDensityLoss = 2 * cPhoto * mp * n0;
+        return surfaceDensityLoss;
     } else {
         return 0.0;
     }
@@ -144,8 +154,8 @@ double DiskWind::computeFluxDiff(int i)
         yPlus = 0.0;
     }
 
-    Fright = (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r) + (constantLeverArm() - 1) * massLossAtRadius(r, 5.0) / (M_PI * au * year * (rPlus - r)) * r);
-    Fleft = (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus) + (constantLeverArm() - 1) * massLossAtRadius(r, 5.0) / (M_PI * au * year * (r - rMinus)) * r);
+    Fright = (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r) + (constantLeverArm() - 1) * massLossAtRadius(r) / (M_PI * au * year * (rPlus - r)) * r);
+    Fleft = (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus) + (constantLeverArm() - 1) * massLossAtRadius(r) / (M_PI * au * year * (r - rMinus)) * r);
     return Fright - Fleft;
 }
 
@@ -182,11 +192,7 @@ void DiskWind::initWithRestartData(int lastFrame)
 }
 
 
-void DiskWind::setParameters(double a, double mass)
-{
-    alpha = a;
-    M = mass;
-}
+
 
 void DiskWind::initWithDensityDistribution(double densityAt1Au, double cutoff)
 {
@@ -232,8 +238,8 @@ void DiskWind::step()
         double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
         data[i].mdot = 2 * M_PI * c * au * au * year / M * (0.5 * data[i].y + data[i].x * ((data[i+1].y - data[i].y)/2 - (data[i].y - data[i-1].y)/2) / dr);
         
-        double densityLoss = massLossAtRadius(data[i].x, 5.0) / (2 * M_PI * au * au * dr) / year;
-        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLoss);
+        double densityLoss = massLossAtRadius(data[i].x);
+        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLoss / (2 * M_PI) * data[i].x);
     }
 
     for (int i = 0; i < NGrid; i++) {

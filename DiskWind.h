@@ -18,9 +18,10 @@ private:
     };
 
     double alpha;
-    double au = 1.5e13;
+    double au = 1.49597871e13;
     double G = 6.67e-8;
     double M;
+    double solarMass = 1.98855e33;
     double kb = 1.38e-16;
     double mp = 1.67e-24;
     double T0 = 280;
@@ -28,6 +29,9 @@ private:
     double floorDensity;
     double diskMass;
     double radialScale;
+    double photoRadius;
+    double luminosity;
+    double normLuminosity = 1e41;
     int NGrid;
     int frame;
     int maxFrames;
@@ -52,12 +56,12 @@ public:
     void computedx();
     double computeFluxDiff(int i);
 
-    double massLossAtRadius(double r, double rg);
+    double massLossAtRadius(double r);
     double leverArmAtRadius(double r);
     double constantLeverArm();
     void setLeverArm(double arm);
 
-    void setParameters(double a, double mass);
+    void setParameters(double a, double mass, double stellarLuminosity, double rg);
     void initWithDensityDistribution(double densityAt1Au, double cutoff);
     void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor);
     void setGeometry(GridGeometry *geometry);

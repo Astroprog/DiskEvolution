@@ -68,7 +68,7 @@ void Simulation::runOrdinarySimulation(char *parseString)
     disk->setParameters(a, mass, luminosity, rg);
     disk->setNumberOfFrames(frames);
     disk->setGeometry(g);
-    disk->setLeverArm(1e15);
+    disk->setLeverArm(1.3);
 
     if (restart) {
         int restartFrame = (int)pMap["restartframe"];

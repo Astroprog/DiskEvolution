@@ -156,6 +156,11 @@ double DiskWind::computeFluxDiff(int i)
 
     Fright = 0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r) + (constantLeverArm() - 1) * 2 * massLossAtRadius(rPlusHalf);
     Fleft = 0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus) + (constantLeverArm() - 1) * 2 * massLossAtRadius(rMinusHalf);
+    if (frame == 1)
+    {
+        std::cout << (constantLeverArm() - 1) * 2 * massLossAtRadius(rPlusHalf) << ", " << (constantLeverArm() - 1) * 2 * massLossAtRadius(rMinusHalf) << std::endl;
+
+    }
     return Fright - Fleft;
 }
 

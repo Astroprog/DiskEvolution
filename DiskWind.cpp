@@ -108,10 +108,9 @@ void DiskWind::setParameters(double a, double mass, double stellarLuminosity, do
 double DiskWind::massLossAtRadius(double r)
 {
     if (r >= photoRadius) {
-        double cPhoto = sqrt(1e4 * kb / (2.3 * mp));
-        double n0 = 5.7e4 * sqrt(luminosity / normLuminosity) * pow(photoRadius * au / 1e14, -1.5) * pow(r / photoRadius, -2.5);
-        double surfaceDensityLoss = 2 * cPhoto * mp * n0;
-        return surfaceDensityLoss;
+        double totalMassloss = 4.1e-10 * sqrt(luminosity / normLuminosity) * sqrt(M / solarMass) * solarMass;
+        double massloss = 1.5 * totalMassloss * pow(r / photoRadius, -2.5);
+        return massloss;
     } else {
         return 0.0;
     }
@@ -237,9 +236,9 @@ void DiskWind::step()
         double fluxDiff = computeFluxDiff(i);
         double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
         data[i].mdot = 2 * M_PI * c * au * au * year / M * (0.5 * data[i].y + data[i].x * ((data[i+1].y - data[i].y)/2 - (data[i].y - data[i-1].y)/2) / dr);
-        
-        double densityLoss = massLossAtRadius(data[i].x);
-        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLoss / (2 * M_PI) * data[i].x);
+
+        double densityLoss = massLossAtRadius(data[i].x) / (2 * M_PI * au * au * dr) / year;
+        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLoss);
     }
 
     for (int i = 0; i < NGrid; i++) {

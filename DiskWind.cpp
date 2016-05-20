@@ -149,6 +149,37 @@ double DiskWind::computeFluxDiff(int i)
     return Fright - Fleft;
 }
 
+void DiskWind::step()
+{
+    double *tempData = (double *)malloc(NGrid * sizeof(double));
+
+    double c = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
+
+    for (int i = 0; i < NGrid; i++) {
+        double fluxDiff = computeFluxDiff(i);
+        double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
+
+        double densityLoss = massLossAtRadius(data[i].x, 5.0) / (2 * M_PI * au * au * dr) / year;
+        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLoss);
+    }
+
+    for (int i = 0; i < NGrid; i++) {
+        if (tempData[i] / data[i].x < floorDensity)
+        {
+            data[i].y = floorDensity * data[i].x;
+        } else {
+            data[i].y = tempData[i];
+        }
+    }
+
+    free(tempData);
+
+    frame++;
+    if (frame % frameStride == 0) {
+        writeFrame();
+    }
+}
+
 void DiskWind::initWithRestartData(int lastFrame)
 {
     std::cout << "Initializing with frame " << lastFrame << std::endl;
@@ -188,18 +219,6 @@ void DiskWind::setParameters(double a, double mass)
     M = mass;
 }
 
-void DiskWind::initWithDensityDistribution(double densityAt1Au, double cutoff)
-{
-    std::cout << "Initializing grid with size " << NGrid << std::endl;
-
-    for (int i = 0; i < NGrid; i++) {
-        data[i].x = g->convertIndexToPosition(i);
-        data[i].y = densityAt1Au * exp(-data[i].x / cutoff);
-        data[i].mdot = 0.0;
-    }
-
-    writeFrame();
-}
 
 void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor)
 {
@@ -221,37 +240,6 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
     writeFrame();
 }
 
-void DiskWind::step()
-{
-    double *tempData = (double *)malloc(NGrid * sizeof(double));
-
-    double c = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
-
-    for (int i = 0; i < NGrid; i++) {
-        double fluxDiff = computeFluxDiff(i);
-        double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
-        data[i].mdot = 2 * M_PI * c * au * au * year / M * (0.5 * data[i].y + data[i].x * ((data[i+1].y - data[i].y)/2 - (data[i].y - data[i-1].y)/2) / dr);
-        
-        double densityLoss = massLossAtRadius(data[i].x, 5.0) / (2 * M_PI * au * au * dr) / year;
-        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLoss);
-    }
-
-    for (int i = 0; i < NGrid; i++) {
-        if (tempData[i] / data[i].x < floorDensity)
-        {
-            data[i].y = floorDensity * data[i].x;
-        } else {
-            data[i].y = tempData[i];
-        }
-    }
-
-    free(tempData);
-
-    frame++;
-    if (frame % frameStride == 0) {
-        writeFrame();
-    }
-}
 
 void DiskWind::restartSimulation(int lastFrame, int years)
 {

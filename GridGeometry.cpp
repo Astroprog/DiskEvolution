@@ -67,40 +67,30 @@ double GridGeometry::cgsDensity(double density)
 
 double GridGeometry::densityLoss(double cgsDensityLoss)
 {
-    return cgsDensityLoss * (r0 * r0 * t0) / m0;
+    return cgsDensityLoss * (r0 * r0) / m0;
 }
 
 double GridGeometry::cgsDensityLoss(double densityLoss)
 {
-    return densityLoss / (r0 * r0 * t0) * m0;
+    return densityLoss / (r0 * r0) * m0;
 }
 
 double GridGeometry::viscousConstant(double constant)
 {
-    return constant / sqrt(r0) * t0;
+    return constant / sqrt(r0);
 }
 
 double GridGeometry::cgsViscousConstant(double constant)
 {
-    return constant * sqrt(r0) / t0;
+    return constant * sqrt(r0);
 }
 
 double GridGeometry::viscosity(double cgsViscosity)
 {
-    return cgsViscosity * t0 / (r0 * r0);
+    return cgsViscosity / (r0 * r0);
 }
 
 double GridGeometry::cgsViscosity(double viscosity)
 {
-    return viscosity / t0 * r0 * r0;
-}
-
-double GridGeometry::simTime(double cgsTime)
-{
-    return cgsTime / t0;
-}
-
-double GridGeometry::cgsTime(double simTime)
-{
-    return simTime * t0;
+    return viscosity * r0 * r0;
 }

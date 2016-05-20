@@ -41,8 +41,6 @@ public:
     double cgsViscousConstant(double constant);
     double viscosity(double cgsViscosity);
     double cgsViscosity(double viscosity);
-    double simTime(double cgsTime);
-    double cgsTime(double simTime);
 
     double convertIndexToPosition(double i)
     {

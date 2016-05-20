@@ -36,11 +36,11 @@ DiskWind::~DiskWind()
 
 void DiskWind::writeFrame()
 {
-    std::cout << "Writing frame " << outputFrame << " (step " << frame << ", " << g->cgsTime(dt)/year * frame << "yr)" << std::endl;
+    std::cout << "Writing frame " << outputFrame << " (step " << frame << ", " << dt/year * frame << "yr)" << std::endl;
     std::vector<std::string> stringOutput;
 
     std::stringstream headerStream;
-    headerStream << frame << " " << g->cgsTime(dt)/year * frame;
+    headerStream << frame << " " << dt/year * frame;
     stringOutput.push_back(headerStream.str());
 
     for (int i = 0; i < NGrid; i++)
@@ -93,7 +93,7 @@ void DiskWind::computedt()
         }
     }
 
-    dt = dt / 10.0;
+    dt = 0.8 * dt;
 
     std::cout << "Timestep: " << dt << std::endl;
 }
@@ -159,8 +159,8 @@ double DiskWind::computeFluxDiff(int i)
         yPlus = 0.0;
     }
 
-    Fright = viscousConstant * (rPlusHalf * rPlusHalf * (yPlus - y)/(rPlus - r) + 1.5 * rPlusHalf * 0.5 * (yPlus + y));
-    Fleft = viscousConstant * (rMinusHalf * rMinusHalf * (y - yMinus)/(r - rMinus) + 1.5 * rMinusHalf * 0.5 * (y + yMinus));
+    Fright = (rPlusHalf * rPlusHalf * (yPlus - y)/(rPlus - r) + 1.5 * rPlusHalf * 0.5 * (yPlus + y));
+    Fleft = (rMinusHalf * rMinusHalf * (y - yMinus)/(r - rMinus) + 1.5 * rMinusHalf * 0.5 * (y + yMinus));
 
     return Fright - Fleft;
 }
@@ -176,7 +176,7 @@ void DiskWind::step()
         double r = g->convertIndexToPosition(i);
 
 //        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLoss);
-        tempData[i] = data[i].y + dt * 3 / (r * dr) * fluxDiff;
+        tempData[i] = data[i].y + dt * 3 * viscousConstant / (r * dr) * fluxDiff;
 //        std::cout << fluxDiff << std::endl;
     }
 
@@ -303,10 +303,11 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArm
 
 void DiskWind::runSimulation(int years)
 {
-    double NSteps = (double)years * year / g->cgsTime(dt);
+    double NSteps = (double)years * year / dt;
     frameStride = (int)(NSteps / (double)maxFrames);
 
-    for (int i = 0; g->cgsTime(dt)/year * i < years; i++) {
+    for (int i = 0; dt/year * i < years; i++) {
         step();
+        writeFrame();
     }
 }

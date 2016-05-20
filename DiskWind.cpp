@@ -36,17 +36,17 @@ DiskWind::~DiskWind()
 
 void DiskWind::writeFrame()
 {
-    std::cout << "Writing frame " << outputFrame << " (step " << frame << ", " << dt/year * frame << "yr)" << std::endl;
+    std::cout << "Writing frame " << outputFrame << " (step " << frame << ", " << g->cgsTime(dt)/year * frame << "yr)" << std::endl;
     std::vector<std::string> stringOutput;
 
     std::stringstream headerStream;
-    headerStream << frame << " " << dt/year * frame;
+    headerStream << frame << " " << g->cgsTime(dt)/year * frame;
     stringOutput.push_back(headerStream.str());
 
     for (int i = 0; i < NGrid; i++)
     {
         std::stringstream ss;
-        ss << data[i].x << " " << data[i].y / data[i].x << " " << data[i].mdot;
+        ss << data[i].x << " " << g->cgsDensity(data[i].y) << " " << data[i].mdot;
         stringOutput.push_back(ss.str());
     }
     std::ostringstream tempStream;
@@ -83,16 +83,17 @@ void DiskWind::computedx()
 void DiskWind::computedt()
 {
     double x = data[1].x - data[0].x;
-    double c = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
-    dt = 0.25 * pow(x, 1.5)/c;
+    dt = 0.25 * pow(x, 1.5) / viscousConstant;
 
     for (int i = 2; i < NGrid; i++) {
         x = pow((data[i].x - data[i-1].x), 1.5);
-        double temp = 0.25 * x / c;
+        double temp = 0.25 * x / viscousConstant;
         if (temp < dt) {
             dt = temp;
         }
     }
+
+    dt = dt / 10.0;
 
     std::cout << "Timestep: " << dt << std::endl;
 }
@@ -101,17 +102,23 @@ void DiskWind::setParameters(double a, double mass, double stellarLuminosity, do
 {
     alpha = a;
     M = mass;
-    photoRadius = rg / au;
+    photoRadius = g->radius(rg);
     luminosity = stellarLuminosity;
 }
 
-double DiskWind::massLossAtRadius(double r)
+double DiskWind::viscosityAtRadius(double r)
+{
+    return viscousConstant * r;
+}
+
+
+double DiskWind::densityLossAtRadius(double r)
 {
     if (r >= photoRadius) {
         double soundspeed = sqrt(kb * 1e4 / (2.3 * mp));
-        double numberDensity = 5.7e4 * sqrt(luminosity / normLuminosity) * pow(photoRadius * au * 1e-14, -1.5) * pow(r / photoRadius, -2.5);
-        double massloss = 2 * soundspeed * numberDensity * mp;
-        return massloss;
+        double numberDensity = 5.7e4 * sqrt(luminosity / normLuminosity) * pow(photoRadius / g->radius(1e-14), -1.5) * pow(r / photoRadius, -2.5);
+        double densityLoss = 2 * soundspeed * numberDensity * mp;
+        return g->densityLoss(densityLoss);
     } else {
         return 0.0;
     }
@@ -144,8 +151,6 @@ double DiskWind::computeFluxDiff(int i)
     double y = data[i].y;
     double yMinus = data[i - 1].y;
 
-
-
     double Fleft, Fright;
 
     if (i == 0) {
@@ -154,14 +159,42 @@ double DiskWind::computeFluxDiff(int i)
         yPlus = 0.0;
     }
 
-    Fright = 0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r) + (constantLeverArm() - 1) * 2 * massLossAtRadius(rPlusHalf);
-    Fleft = 0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus) + (constantLeverArm() - 1) * 2 * massLossAtRadius(rMinusHalf);
-    if (frame == 1)
-    {
-        std::cout << (constantLeverArm() - 1) * 2 * massLossAtRadius(rPlusHalf) << ", " << (constantLeverArm() - 1) * 2 * massLossAtRadius(rMinusHalf) << std::endl;
+    Fright = viscousConstant * (rPlusHalf * rPlusHalf * (yPlus - y)/(rPlus - r) + 1.5 * rPlusHalf * 0.5 * (yPlus + y));
+    Fleft = viscousConstant * (rMinusHalf * rMinusHalf * (y - yMinus)/(r - rMinus) + 1.5 * rMinusHalf * 0.5 * (y + yMinus));
 
-    }
     return Fright - Fleft;
+}
+
+void DiskWind::step()
+{
+    double *tempData = (double *)malloc(NGrid * sizeof(double));
+//    std::cout << "step" << std::endl << std::endl;
+
+    for (int i = 0; i < NGrid; i++) {
+        double fluxDiff = computeFluxDiff(i);
+        double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
+        double r = g->convertIndexToPosition(i);
+
+//        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLoss);
+        tempData[i] = data[i].y + dt * 3 / (r * dr) * fluxDiff;
+//        std::cout << fluxDiff << std::endl;
+    }
+
+    for (int i = 0; i < NGrid; i++) {
+//        if (tempData[i] / data[i].x < floorDensity)
+//        {
+////            data[i].y = floorDensity * data[i].x;
+//        } else {
+            data[i].y = tempData[i];
+//        }
+    }
+
+    free(tempData);
+
+    frame++;
+    if (frame % frameStride == 0) {
+        writeFrame();
+    }
 }
 
 void DiskWind::initWithRestartData(int lastFrame)
@@ -188,29 +221,17 @@ void DiskWind::initWithRestartData(int lastFrame)
                 std::cout << "Error while parsing restart file" << std::endl;
                 break;
             } else {
-                data[i-1].y *= data[i-1].x;
                 data[i-1].mdot = 0.0;
             }
             i++;
         }
     }
+
+    viscousConstant = g->viscousConstant(viscousConstant);
 }
 
 
 
-
-void DiskWind::initWithDensityDistribution(double densityAt1Au, double cutoff)
-{
-    std::cout << "Initializing grid with size " << NGrid << std::endl;
-
-    for (int i = 0; i < NGrid; i++) {
-        data[i].x = g->convertIndexToPosition(i);
-        data[i].y = densityAt1Au * exp(-data[i].x / cutoff);
-        data[i].mdot = 0.0;
-    }
-
-    writeFrame();
-}
 
 void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor)
 {
@@ -222,47 +243,22 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
 
     for (int i = 0; i < NGrid; i++) {
         data[i].x = g->convertIndexToPosition(i);
-        data[i].y = initialDiskMass / (2 * M_PI * au * au * radialScaleFactor * data[i].x) * exp(-data[i].x / radialScaleFactor) * data[i].x;
+        data[i].y = g->mass(initialDiskMass) / (2 * M_PI * radialScaleFactor * data[i].x) * exp(-data[i].x / radialScaleFactor);
         if (data[i].y / data[i].x < floorDensity) {
-            data[i].y = floorDensity * data[i].x;
+            data[i].y = floorDensity;
         }
+
+        data[i].y = g->density(data[i].y);
+
         data[i].mdot = 0.0;
     }
 
     writeFrame();
+
+    viscousConstant = 3.0 * alpha * kb * T0 / (2.3 * mp * sqrt(G * M));
+    viscousConstant = g->viscousConstant(viscousConstant);
 }
 
-void DiskWind::step()
-{
-    double *tempData = (double *)malloc(NGrid * sizeof(double));
-
-    double c = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
-
-    for (int i = 0; i < NGrid; i++) {
-        double fluxDiff = computeFluxDiff(i);
-        double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
-        data[i].mdot = 2 * M_PI * c * au * au * year / M * (0.5 * data[i].y + data[i].x * ((data[i+1].y - data[i].y)/2 - (data[i].y - data[i-1].y)/2) / dr);
-
-        double densityLoss = massLossAtRadius(data[i].x) * g->convertIndexToPosition(i);
-        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLoss);
-    }
-
-    for (int i = 0; i < NGrid; i++) {
-        if (tempData[i] / data[i].x < floorDensity)
-        {
-            data[i].y = floorDensity * data[i].x;
-        } else {
-            data[i].y = tempData[i];
-        }
-    }
-
-    free(tempData);
-
-    frame++;
-    if (frame % frameStride == 0) {
-        writeFrame();
-    }
-}
 
 void DiskWind::restartSimulation(int lastFrame, int years)
 {
@@ -307,10 +303,10 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArm
 
 void DiskWind::runSimulation(int years)
 {
-    double NSteps = (double)years * year / dt;
+    double NSteps = (double)years * year / g->cgsTime(dt);
     frameStride = (int)(NSteps / (double)maxFrames);
 
-    for (int i = 0; dt/year * i < years; i++) {
+    for (int i = 0; g->cgsTime(dt)/year * i < years; i++) {
         step();
     }
 }

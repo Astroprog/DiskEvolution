@@ -32,6 +32,7 @@ private:
     double photoRadius;
     double luminosity;
     double normLuminosity = 1e41;
+    double viscousConstant;
     int NGrid;
     int frame;
     int maxFrames;
@@ -56,13 +57,13 @@ public:
     void computedx();
     double computeFluxDiff(int i);
 
-    double massLossAtRadius(double r);
+    double viscosityAtRadius(double r);
+    double densityLossAtRadius(double r);
     double leverArmAtRadius(double r);
     double constantLeverArm();
     void setLeverArm(double arm);
 
     void setParameters(double a, double mass, double stellarLuminosity, double rg);
-    void initWithDensityDistribution(double densityAt1Au, double cutoff);
     void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor);
     void setGeometry(GridGeometry *geometry);
     void setNumberOfFrames(int NFrames);

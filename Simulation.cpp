@@ -26,7 +26,7 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
     int frames = (int)pMap["frames"];
     int time = (int)pMap["time"];
 
-    GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
+    GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale, 1.49597871e13 * 1.49597871e13, 1.49597871e13, 3.15e7);
     DiskWind *disk = new DiskWind(NGrid);
     disk->setParameters(a, mass, luminosity, rg);
     disk->setNumberOfFrames(frames);
@@ -46,7 +46,7 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
 
 void Simulation::runOrdinarySimulation(char *parseString)
 {
-    std::map<std::string, double> pMap = ParameterParser::parseFile(parseString);
+    std::map<std::string, double> pMap = ParameterParser::parseFile("parameter.par");
 
     bool restart = (bool)pMap["restart"];
     bool logscale = (bool)pMap["logscale"];
@@ -63,11 +63,11 @@ void Simulation::runOrdinarySimulation(char *parseString)
     int frames = (int)pMap["frames"];
     int time = (int)pMap["time"];
 
-    GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
+    GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale, 1.49597871e13 * 1.49597871e13, 1.49597871e13, 3.15e7);
     DiskWind *disk = new DiskWind(NGrid);
+    disk->setGeometry(g);
     disk->setParameters(a, mass, luminosity, rg);
     disk->setNumberOfFrames(frames);
-    disk->setGeometry(g);
     disk->setLeverArm(1.3);
 
     if (restart) {

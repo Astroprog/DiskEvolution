@@ -107,6 +107,18 @@ double DiskWind::massLossAtRadius(double r, double rg)
     }
 }
 
+double DiskWind::densityLossAtRadius(double r)
+{
+    if (r * au >= photoRadius) {
+        double soundspeed = sqrt(kb * 1e4 / (2.3 * mp));
+        double numberDensity = 5.7e4 * sqrt(luminosity / normLuminosity) * pow(photoRadius * 1e-14, -1.5) * pow(r * au / photoRadius, -2.5);
+        double densityLoss = 2 * soundspeed * numberDensity * mp;
+        return densityLoss;
+    } else {
+        return 0.0;
+    }
+}
+
 double DiskWind::leverArmAtRadius(double r)
 {
     return 1.0;
@@ -144,8 +156,8 @@ double DiskWind::computeFluxDiff(int i)
         yPlus = 0.0;
     }
 
-    Fright = (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r) + (constantLeverArm() - 1) * massLossAtRadius(r, 5.0) / (M_PI * au * year * (rPlus - r)) * r);
-    Fleft = (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus) + (constantLeverArm() - 1) * massLossAtRadius(r, 5.0) / (M_PI * au * year * (r - rMinus)) * r);
+    Fright = (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r) + 2 * (constantLeverArm() - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf));
+    Fleft = (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus) + 2 * (constantLeverArm() - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf));
     return Fright - Fleft;
 }
 
@@ -158,9 +170,7 @@ void DiskWind::step()
     for (int i = 0; i < NGrid; i++) {
         double fluxDiff = computeFluxDiff(i);
         double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
-
-        double densityLoss = massLossAtRadius(data[i].x, 5.0) / (2 * M_PI * au * au * dr) / year;
-        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLoss);
+        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLossAtRadius(data[i].x) * data[i].x);
     }
 
     for (int i = 0; i < NGrid; i++) {
@@ -213,10 +223,12 @@ void DiskWind::initWithRestartData(int lastFrame)
 }
 
 
-void DiskWind::setParameters(double a, double mass)
+void DiskWind::setParameters(double a, double mass, double lum, double rg)
 {
     alpha = a;
     M = mass;
+    luminosity = lum;
+    photoRadius = rg;
 }
 
 

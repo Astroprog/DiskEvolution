@@ -23,10 +23,12 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
     double floorDensity = pMap["floor"];
     int frames = (int)pMap["frames"];
     int time = (int)pMap["time"];
+    double luminosity = pMap["luminosiry"];
+    double rg = pMap["rg"];
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass);
+    disk->setParameters(a, mass, luminosity, rg);
     disk->setNumberOfFrames(frames);
     disk->setGeometry(g);
 
@@ -56,12 +58,14 @@ void Simulation::runOrdinarySimulation(char *parseString)
     double initialDiskMassRatio = pMap["diskmass"];
     double radialScaleFactor = pMap["rscale"];
     double floorDensity = pMap["floor"];
+    double luminosity = pMap["luminosiry"];
+    double rg = pMap["rg"];
     int frames = (int)pMap["frames"];
     int time = (int)pMap["time"];
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass);
+    disk->setParameters(a, mass, luminosity, rg);
     disk->setNumberOfFrames(frames);
     disk->setGeometry(g);
 

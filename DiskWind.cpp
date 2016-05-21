@@ -173,6 +173,7 @@ void DiskWind::step()
         tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLossAtRadius(data[i].x) * data[i].x);
     }
 
+
     for (int i = 0; i < NGrid; i++) {
         if (tempData[i] / data[i].x < floorDensity)
         {

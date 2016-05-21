@@ -59,12 +59,9 @@ public:
     double densityLossAtRadius(double r);
     double leverArmAtRadius(double r);
     double constantLeverArm();
-    void setLeverArm(double arm);
 
-    void setParameters(double a, double mass, double lum, double rg);
+    void setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry);
     void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor);
-    void setGeometry(GridGeometry *geometry);
-    void setNumberOfFrames(int NFrames);
 
     void runSimulation(int years);
     void runDispersalAnalysis(int timeLimit, std::vector<double>* leverArms);

@@ -57,16 +57,6 @@ void DiskWind::writeFrame()
     outputFrame++;
 }
 
-void DiskWind::setGeometry(GridGeometry *geometry)
-{
-    g = geometry;
-}
-
-void DiskWind::setNumberOfFrames(int NFrames)
-{
-    maxFrames = NFrames;
-}
-
 void DiskWind::computedx()
 {
     dx = data[1].x - data[0].x;  //Determining the smallest dx in data
@@ -119,10 +109,6 @@ double DiskWind::constantLeverArm()
     return leverArm;
 }
 
-void DiskWind::setLeverArm(double arm)
-{
-    leverArm = arm;
-}
 
 double DiskWind::computeFluxDiff(int i)
 {
@@ -213,12 +199,15 @@ void DiskWind::initWithRestartData(int lastFrame)
 }
 
 
-void DiskWind::setParameters(double a, double mass, double lum, double rg)
+void DiskWind::setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry)
 {
     alpha = a;
     M = mass;
     luminosity = lum;
     photoRadius = rg;
+    leverArm = lever;
+    maxFrames = NFrames;
+    g = geometry;
 
     viscousConstant = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
 }
@@ -242,6 +231,8 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
     }
 
     writeFrame();
+    computedx();
+    computedt();
 }
 
 

@@ -28,13 +28,8 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass, luminosity, rg);
-    disk->setNumberOfFrames(frames);
-    disk->setGeometry(g);
-
+    disk->setParameters(a, mass, luminosity, rg, 1.0, frames, g);
     disk->initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
-    disk->computedx();
-    disk->computedt();
 
     std::vector<double> *lambda = new std::vector<double>;
     lambda->push_back(1.3);
@@ -65,21 +60,14 @@ void Simulation::runOrdinarySimulation(char *parseString)
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass, luminosity, rg);
-    disk->setLeverArm(10.0);
-    disk->setNumberOfFrames(frames);
-    disk->setGeometry(g);
-
+    disk->setParameters(a, mass, luminosity, rg, 1.0, frames, g);
+    
     if (restart) {
         int restartFrame = (int)pMap["restartframe"];
         disk->initWithRestartData(restartFrame);
-        disk->computedx();
-        disk->computedt();
         disk->restartSimulation(restartFrame, time);
     } else {
         disk->initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
-        disk->computedx();
-        disk->computedt();
         disk->runSimulation(time);
     }
 }

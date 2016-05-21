@@ -146,8 +146,8 @@ double DiskWind::computeFluxDiff(int i)
         yPlus = 0.0;
     }
 
-    Fright = (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r) + 2 * (constantLeverArm() - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf));
-    Fleft = (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus) + 2 * (constantLeverArm() - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf));
+    Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) - 2 * (constantLeverArm() - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
+    Fleft = viscousConstant * (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus)) - 2 * (constantLeverArm() - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf);
     return Fright - Fleft;
 }
 
@@ -159,7 +159,7 @@ void DiskWind::step()
     for (int i = 0; i < NGrid; i++) {
         double fluxDiff = computeFluxDiff(i);
         double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
-        tempData[i] = data[i].y + dt * (viscousConstant / dr * fluxDiff - densityLossAtRadius(data[i].x) * data[i].x);
+        tempData[i] = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(data[i].x) * data[i].x);
     }
 
 

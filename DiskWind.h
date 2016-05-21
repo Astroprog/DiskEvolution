@@ -24,7 +24,7 @@ private:
     double kb = 1.38e-16;
     double mp = 1.67e-24;
     double T0 = 280;
-    double leverArm = 1.0;
+    double leverArm;
     double floorDensity;
     double diskMass;
     double radialScale;

@@ -66,6 +66,7 @@ void Simulation::runOrdinarySimulation(char *parseString)
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
     disk->setParameters(a, mass, luminosity, rg);
+    disk->setLeverArm(10.0);
     disk->setNumberOfFrames(frames);
     disk->setGeometry(g);
 

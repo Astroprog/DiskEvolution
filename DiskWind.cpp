@@ -83,12 +83,11 @@ void DiskWind::computedx()
 void DiskWind::computedt()
 {
     double x = data[1].x - data[0].x;
-    double c = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
-    dt = 0.25 * pow(x, 1.5)/c;
+    dt = 0.25 * pow(x, 1.5)/viscousConstant;
 
     for (int i = 2; i < NGrid; i++) {
         x = pow((data[i].x - data[i-1].x), 1.5);
-        double temp = 0.25 * x / c;
+        double temp = 0.25 * x / viscousConstant;
         if (temp < dt) {
             dt = temp;
         }
@@ -97,15 +96,6 @@ void DiskWind::computedt()
     std::cout << "Timestep: " << dt << std::endl;
 }
 
-double DiskWind::massLossAtRadius(double r, double rg)
-{
-    double rate = 1e25;
-    if (r >= rg) {
-        return rate * pow(r, -2.5);
-    } else {
-        return 0.0;
-    }
-}
 
 double DiskWind::densityLossAtRadius(double r)
 {
@@ -165,12 +155,11 @@ void DiskWind::step()
 {
     double *tempData = (double *)malloc(NGrid * sizeof(double));
 
-    double c = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
 
     for (int i = 0; i < NGrid; i++) {
         double fluxDiff = computeFluxDiff(i);
         double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
-        tempData[i] = data[i].y + dt * (c / dr * fluxDiff - densityLossAtRadius(data[i].x) * data[i].x);
+        tempData[i] = data[i].y + dt * (viscousConstant / dr * fluxDiff - densityLossAtRadius(data[i].x) * data[i].x);
     }
 
 
@@ -230,6 +219,8 @@ void DiskWind::setParameters(double a, double mass, double lum, double rg)
     M = mass;
     luminosity = lum;
     photoRadius = rg;
+
+    viscousConstant = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
 }
 
 

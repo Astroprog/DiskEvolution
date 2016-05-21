@@ -31,6 +31,7 @@ private:
     double luminosity;
     double normLuminosity = 1e41;
     double photoRadius;
+    double viscousConstant;
     int NGrid;
     int frame;
     int maxFrames;
@@ -55,7 +56,6 @@ public:
     void computedx();
     double computeFluxDiff(int i);
 
-    double massLossAtRadius(double r, double rg);
     double densityLossAtRadius(double r);
     double leverArmAtRadius(double r);
     double constantLeverArm();

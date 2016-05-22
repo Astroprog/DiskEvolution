@@ -32,9 +32,9 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
     disk->initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
 
     std::vector<double> *lambda = new std::vector<double>;
-    lambda->push_back(1.3);
-    lambda->push_back(1.4);
-    lambda->push_back(1.5);
+    for (double i = 2.35; i < 10.0; i = i + 0.05) {
+        lambda->push_back(i);
+    }
 
     disk->runDispersalAnalysis(10000000, lambda);
 }
@@ -61,7 +61,7 @@ void Simulation::runOrdinarySimulation(char *parseString)
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
     disk->setParameters(a, mass, luminosity, rg, 1.0, frames, g);
-    
+
     if (restart) {
         int restartFrame = (int)pMap["restartframe"];
         disk->initWithRestartData(restartFrame);

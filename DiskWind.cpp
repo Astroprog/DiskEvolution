@@ -251,8 +251,11 @@ void DiskWind::restartSimulation(int lastFrame, int years)
 
 void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArms)
 {
-    double NSteps = (double)timeLimit / 10 * year / dt;
+    double NSteps = (double)timeLimit * year / dt;
     frameStride = (int)(NSteps / (double)maxFrames);
+
+    std::ofstream dispersalFile;
+    dispersalFile.open("dispersal.dat");
 
     for (unsigned int i = 0; i < leverArms->size(); i++) {
         leverArm = leverArms->at(i);
@@ -263,10 +266,11 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArm
         for (int k = 0; dt/year * k < timeLimit; k++) {
             step();
             bool dispersed = false;
-            for (int j = 60; j < 66; j++) {
+            for (int j = 60; j < 75; j++) {
                 if (data[j].y / data[j].x <= 2*floorDensity)
                 {
                     std::cout << "For lambda = " << leverArms->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
+                    dispersalFile << leverArms->at(i) << " " << dt/year * k << std::endl;
                     dispersed = true;
                 }
             }
@@ -275,6 +279,8 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArm
             }
         }
     }
+
+    dispersalFile.close();
 }
 
 void DiskWind::runSimulation(int years)

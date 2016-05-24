@@ -32,7 +32,7 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
     disk->initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
 
     std::vector<double> *lambda = new std::vector<double>;
-    for (double i = 2.35; i < 10.0; i = i + 0.05) {
+    for (double i = 5.7; i < 10.0; i = i + 0.05) {
         lambda->push_back(i);
     }
 

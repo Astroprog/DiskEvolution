@@ -3,9 +3,11 @@
 //
 
 #include <vector>
+#include <iostream>
 #include "Simulation.h"
 #include "ParameterParser.h"
 #include "DiskWind.h"
+#include <mpi.h>
 
 
 void Simulation::runDiskDispersalAnalysis(char* parseString)
@@ -41,6 +43,10 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
 
 void Simulation::runOrdinarySimulation(char *parseString)
 {
+    const int root_process = 0;
+    const int current_id = MPI::COMM_WORLD.Get_rank();
+    const int processors = MPI::COMM_WORLD.Get_size();
+
     std::map<std::string, double> pMap = ParameterParser::parseFile(parseString);
 
     bool restart = (bool)pMap["restart"];
@@ -61,6 +67,7 @@ void Simulation::runOrdinarySimulation(char *parseString)
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
     disk->setParameters(a, mass, luminosity, rg, 4.0, frames, g);
+
 
     if (restart) {
         int restartFrame = (int)pMap["restartframe"];

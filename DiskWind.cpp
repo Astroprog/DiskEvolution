@@ -9,6 +9,8 @@
 #include <sstream>
 #include <fstream>
 #include <iterator>
+#include <mpi.h>
+#include <hdf5_hl.h>
 
 DiskWind::DiskWind()
 {
@@ -16,7 +18,7 @@ DiskWind::DiskWind()
     frame = 0;
     frameStride = 1;
     outputFrame = 0;
-    data = (Point *)malloc(NGrid * sizeof(Point));
+    data = (double *)malloc(NGrid * sizeof(double));
 }
 
 DiskWind::DiskWind(int ncells)
@@ -25,7 +27,7 @@ DiskWind::DiskWind(int ncells)
     frame = 0;
     frameStride = 1;
     outputFrame = 0;
-    data = (Point *)malloc(NGrid * sizeof(Point));
+    data = (double *)malloc(NGrid * sizeof(double));
 }
 
 DiskWind::~DiskWind()
@@ -46,7 +48,8 @@ void DiskWind::writeFrame()
     for (int i = 0; i < NGrid; i++)
     {
         std::stringstream ss;
-        ss << data[i].x << " " << data[i].y / data[i].x << " " << data[i].mdot;
+        double pos = g->convertIndexToPosition(i);
+        ss << pos << " " << data[i] / pos;
         stringOutput.push_back(ss.str());
     }
     std::ostringstream tempStream;
@@ -59,10 +62,10 @@ void DiskWind::writeFrame()
 
 void DiskWind::computedx()
 {
-    dx = data[1].x - data[0].x;  //Determining the smallest dx in data
+    dx = g->convertIndexToPosition(1) - g->convertIndexToPosition(0);  //Determining the smallest dx in data
     if (NGrid > 2) {
         for (int i = 2; i < NGrid; i++) {
-            double temp = data[i].x - data[i-1].x;
+            double temp = g->convertIndexToPosition(i) - g->convertIndexToPosition(i - 1);
             if (temp < dx) {
                 dx = temp;
             }
@@ -72,11 +75,11 @@ void DiskWind::computedx()
 
 void DiskWind::computedt()
 {
-    double x = data[1].x - data[0].x;
+    double x = g->convertIndexToPosition(1) - g->convertIndexToPosition(0);
     dt = 0.25 * pow(x, 1.5)/viscousConstant;
 
     for (int i = 2; i < NGrid; i++) {
-        x = pow((data[i].x - data[i-1].x), 1.5);
+        x = pow((g->convertIndexToPosition(i) - g->convertIndexToPosition(i - 1)), 1.5);
         double temp = 0.25 * x / viscousConstant;
         if (temp < dt) {
             dt = temp;
@@ -110,7 +113,7 @@ double DiskWind::constantLeverArm()
 }
 
 
-double DiskWind::computeFluxDiff(int i)
+double DiskWind::computeFluxDiff(const int i)
 {
     double rPlus = g->convertIndexToPosition(i + 1.0);
     double rPlusHalf = g->convertIndexToPosition(i + 0.5);
@@ -118,9 +121,9 @@ double DiskWind::computeFluxDiff(int i)
     double rMinusHalf = g->convertIndexToPosition(i - 0.5);
     double rMinus = g->convertIndexToPosition(i - 1.0);
 
-    double yPlus = data[i + 1].y;
-    double y = data[i].y;
-    double yMinus = data[i - 1].y;
+    double yPlus = data[i + 1];
+    double y = data[i];
+    double yMinus = data[i - 1];
 
 
 
@@ -139,30 +142,89 @@ double DiskWind::computeFluxDiff(int i)
 
 void DiskWind::step()
 {
-    double *tempData = (double *)malloc(NGrid * sizeof(double));
 
+    // Determine MPI Data
+    const int root_process = 0;
+    const int current_id = MPI::COMM_WORLD.Get_rank();
+    const int processors = MPI::COMM_WORLD.Get_size();
+    const int chunksize = NGrid / processors;
 
-    for (int i = 0; i < NGrid; i++) {
-        double fluxDiff = computeFluxDiff(i);
-        double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
-        tempData[i] = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(data[i].x) * data[i].x);
-    }
+    // Root process controls the remaining cores
+    if (current_id == root_process)
+    {
+        // temporary storage for all chunks
+        double *tempData = (double *)malloc((chunksize + 1) * sizeof(double));
 
+        // boundaries are exchanged
+        MPI::COMM_WORLD.Send(&data[chunksize - 1], 1, MPI_DOUBLE, root_process + 1, 0);
+        MPI::COMM_WORLD.Recv(&data[chunksize], 1, MPI_DOUBLE, root_process + 1, 1);
 
-    for (int i = 0; i < NGrid; i++) {
-        if (tempData[i] / data[i].x < floorDensity)
-        {
-            data[i].y = floorDensity * data[i].x;
-        } else {
-            data[i].y = tempData[i];
+        // root process computes his chunk
+        for (int i = 0; i < chunksize; i++) {
+            double fluxDiff = computeFluxDiff(i);
+            double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
+            double r  = g->convertIndexToPosition(i);
+            tempData[i] = data[i] + dt * (fluxDiff / dr - densityLossAtRadius(r) * r);
         }
-    }
 
-    free(tempData);
+        for (int i = 0; i < chunksize; i++) {
+            double r = g->convertIndexToPosition(i);
+            if (tempData[i] / r < floorDensity)
+            {
+                data[i] = floorDensity * r;
+            } else {
+                data[i] = tempData[i];
+            }
+        }
 
-    frame++;
-    if (frame % frameStride == 0) {
-        writeFrame();
+        free(tempData);
+
+        frame++;
+        if (frame % frameStride == 0) {
+            double *buffer = (double *)malloc((chunksize + 1) * sizeof(double));
+            MPI::COMM_WORLD.Recv(buffer, chunksize + 1, MPI_DOUBLE, root_process + 1, 2);
+
+            for (int i = chunksize; i < NGrid; i++) {
+                data[i] = buffer[i - chunksize];
+            }
+
+            free(buffer);
+            writeFrame();
+        }
+    } else {
+
+        int minIndex = current_id * chunksize;
+        int maxIndex = minIndex + chunksize;
+
+        MPI::COMM_WORLD.Recv(&data[minIndex - 1], 1, MPI_DOUBLE, root_process, 0);
+        MPI::COMM_WORLD.Send(&data[minIndex], 1, MPI_DOUBLE, root_process, 1);
+
+        double *tempData = (double *)malloc((chunksize + 1) * sizeof(double));
+
+        for (int i = minIndex; i < maxIndex; i++) {
+            double fluxDiff = computeFluxDiff(i);
+            double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
+            double r  = g->convertIndexToPosition(i);
+            tempData[i - minIndex] = data[i] + dt * (fluxDiff / dr - densityLossAtRadius(r) * r);
+        }
+
+        for (int i = minIndex; i < maxIndex; i++) {
+            double r = g->convertIndexToPosition(i);
+            if (tempData[i - minIndex] / r < floorDensity)
+            {
+                data[i] = floorDensity * r;
+                tempData[i - minIndex] = floorDensity * r;
+            } else {
+                data[i] = tempData[i - minIndex];
+            }
+        }
+
+        frame++;
+        if (frame % frameStride == 0) {
+            MPI::COMM_WORLD.Send(tempData, chunksize + 1, MPI_DOUBLE, root_process, 2);
+        }
+
+        free(tempData);
     }
 }
 
@@ -185,13 +247,13 @@ void DiskWind::initWithRestartData(int lastFrame)
             }
             i++;
         } else {
-            if (!(iss >> data[i-1].x >> data[i-1].y))
+            double x;
+            if (!(iss >> x >> data[i-1]))
             {
                 std::cout << "Error while parsing restart file" << std::endl;
                 break;
             } else {
-                data[i-1].y *= data[i-1].x;
-                data[i-1].mdot = 0.0;
+                data[i-1] *= g->convertIndexToPosition(i - 1);
             }
             i++;
         }
@@ -222,12 +284,11 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
     diskMass = initialDiskMass;
 
     for (int i = 0; i < NGrid; i++) {
-        data[i].x = g->convertIndexToPosition(i);
-        data[i].y = initialDiskMass / (2 * M_PI * au * au * radialScaleFactor * data[i].x) * exp(-data[i].x / radialScaleFactor) * data[i].x;
-        if (data[i].y / data[i].x < floorDensity) {
-            data[i].y = floorDensity * data[i].x;
+        double x = g->convertIndexToPosition(i);
+        data[i] = initialDiskMass / (2 * M_PI * au * au * radialScaleFactor * x) * exp(-x / radialScaleFactor) * x;
+        if (data[i] / x < floorDensity) {
+            data[i] = floorDensity * x;
         }
-        data[i].mdot = 0.0;
     }
 
     writeFrame();
@@ -267,7 +328,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArm
             step();
             bool dispersed = false;
             for (int j = 60; j < 75; j++) {
-                if (data[j].y / data[j].x <= 2*floorDensity)
+                if (data[j] / g->convertIndexToPosition(j) <= 2*floorDensity)
                 {
                     std::cout << "For lambda = " << leverArms->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
                     dispersalFile << leverArms->at(i) << " " << dt/year * k << std::endl;

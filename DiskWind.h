@@ -11,11 +11,6 @@
 class DiskWind {
 
 private:
-    struct Point {
-        double x;
-        double y;
-        double mdot;
-    };
 
     double alpha;
     double au = 1.5e13;
@@ -43,7 +38,7 @@ private:
     double dt;
     double year = 3.15e7;
     GridGeometry *g;
-    Point *data;
+    double *data;
 
 public:
 
@@ -54,7 +49,7 @@ public:
     void step();
     void computedt();
     void computedx();
-    double computeFluxDiff(int i);
+    double computeFluxDiff(const int i);
 
     double densityLossAtRadius(double r);
     double leverArmAtRadius(double r);

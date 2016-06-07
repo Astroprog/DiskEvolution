@@ -99,9 +99,16 @@ double DiskWind::densityLossAtRadius(double r)
     }
 }
 
-double DiskWind::leverArmAtRadius(double r)
+double DiskWind::leverArmAtCell(int i)
 {
-    return 1.0;
+    double windloss = densityLossAtRadius(g->convertIndexToPosition(i));
+    if (windloss != 0.0)
+    {
+        double mu = 4.0 * M_PI * densityLossAtRadius(g->convertIndexToPosition(i)) * sqrt(G * M / (g->convertIndexToPosition(i) * au)) / data[i].B2;
+        return 1.5 * (1.0 + pow(mu, -2.0/3.0));
+    } else {
+        return 1.0;
+    }
 }
 
 double DiskWind::constantLeverArm()
@@ -132,8 +139,12 @@ double DiskWind::computeFluxDiff(int i)
         yPlus = 0.0;
     }
 
-    Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) - 2 * (constantLeverArm() - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
-    Fleft = viscousConstant * (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus)) - 2 * (constantLeverArm() - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf);
+    if (frame == 1) {
+        std::cout << g->convertIndexToPosition(i) << ": " << leverArmAtCell(i) << std::endl;
+    }
+
+    Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) - 2 * (leverArmAtCell(i) - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
+    Fleft = viscousConstant * (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus)) - 2 * (leverArmAtCell(i) - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf);
     return Fright - Fleft;
 }
 
@@ -199,7 +210,7 @@ void DiskWind::initWithRestartData(int lastFrame)
 }
 
 
-void DiskWind::setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry)
+void DiskWind::setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry, int plasmaParameter)
 {
     alpha = a;
     M = mass;
@@ -208,6 +219,7 @@ void DiskWind::setParameters(double a, double mass, double lum, double rg, doubl
     leverArm = lever;
     maxFrames = NFrames;
     g = geometry;
+    plasma = plasmaParameter;
 
     viscousConstant = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
 }
@@ -228,6 +240,13 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
             data[i].y = floorDensity * data[i].x;
         }
         data[i].mdot = 0.0;
+
+        double soundSpeed = sqrt(kb * T0 / (2.3 * mp * sqrt(data[i].x)));
+        double scaleHeight = soundSpeed / sqrt(G*M/pow(data[i].x * au, 3));
+        double midplaneDensity = data[i].y / data[i].x / (sqrt(2 * M_PI) * scaleHeight);
+        double B2 = 8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
+        std::cout << "Magnetic flux density: " << data[i].x << ": " << sqrt(B2) << std::endl;
+        data[i].B2 = B2;
     }
 
     writeFrame();

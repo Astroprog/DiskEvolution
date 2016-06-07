@@ -15,6 +15,7 @@ private:
         double x;
         double y;
         double mdot;
+        double B2;
     };
 
     double alpha;
@@ -32,6 +33,7 @@ private:
     double normLuminosity = 1e41;
     double photoRadius;
     double viscousConstant;
+    int plasma;
     int NGrid;
     int frame;
     int maxFrames;
@@ -57,10 +59,10 @@ public:
     double computeFluxDiff(int i);
 
     double densityLossAtRadius(double r);
-    double leverArmAtRadius(double r);
+    double leverArmAtCell(int i);
     double constantLeverArm();
 
-    void setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry);
+    void setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry, int plasmaParameter);
     void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor);
 
     void runSimulation(int years);

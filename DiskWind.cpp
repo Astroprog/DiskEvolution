@@ -10,7 +10,6 @@
 #include <fstream>
 #include <iterator>
 #include <mpi.h>
-#include <hdf5_hl.h>
 
 DiskWind::DiskWind()
 {

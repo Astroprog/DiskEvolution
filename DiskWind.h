@@ -56,6 +56,7 @@ public:
     void step();
     void computedt();
     void computedx();
+    double getUpdatedMagneticFluxDensityAtCell(int i);
     double computeFluxDiff(int i);
 
     double densityLossAtRadius(double r);

@@ -148,24 +148,29 @@ double DiskWind::computeFluxDiff(int i)
     return Fright - Fleft;
 }
 
+
 void DiskWind::step()
 {
-    double *tempData = (double *)malloc(NGrid * sizeof(double));
+    Point *tempData = (Point *)malloc(NGrid * sizeof(Point));
 
 
     for (int i = 0; i < NGrid; i++) {
         double fluxDiff = computeFluxDiff(i);
         double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
-        tempData[i] = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(data[i].x) * data[i].x);
+        tempData[i].y = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(data[i].x) * data[i].x);
     }
 
 
     for (int i = 0; i < NGrid; i++) {
-        if (tempData[i] / data[i].x < floorDensity)
+        if (tempData[i].y / data[i].x < floorDensity)
         {
             data[i].y = floorDensity * data[i].x;
         } else {
-            data[i].y = tempData[i];
+            data[i].y = tempData[i].y;
+        }
+        data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+        if (frame % frameStride == 0) {
+            std::cout << frame << ": " << g->convertIndexToPosition(i) << ": " << leverArmAtCell(i) << std::endl;
         }
     }
 
@@ -175,6 +180,14 @@ void DiskWind::step()
     if (frame % frameStride == 0) {
         writeFrame();
     }
+}
+
+double DiskWind::getUpdatedMagneticFluxDensityAtCell(int i)
+{
+    double soundSpeed = sqrt(kb * T0 / (2.3 * mp * sqrt(data[i].x)));
+    double scaleHeight = soundSpeed / sqrt(G*M/pow(data[i].x * au, 3));
+    double midplaneDensity = data[i].y / data[i].x / (sqrt(2 * M_PI) * scaleHeight);
+    return  8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
 }
 
 void DiskWind::initWithRestartData(int lastFrame)

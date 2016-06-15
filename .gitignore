@@ -5,4 +5,5 @@
 !CMakeLists.txt
 !*.py
 !*.par
-!Debug
+!Debug/*.py
+!Debug/*.par

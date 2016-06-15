@@ -11,6 +11,7 @@
 class DiskWind {
 
 private:
+
     struct Point {
         double x;
         double y;
@@ -33,7 +34,7 @@ private:
     double normLuminosity = 1e41;
     double photoRadius;
     double viscousConstant;
-    int plasma;
+    double plasma;
     int NGrid;
     int frame;
     int maxFrames;
@@ -63,7 +64,7 @@ public:
     double leverArmAtCell(int i);
     double constantLeverArm();
 
-    void setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry, int plasmaParameter);
+    void setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry, double plasmaParameter);
     void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor);
 
     void runSimulation(int years);

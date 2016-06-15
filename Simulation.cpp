@@ -3,9 +3,11 @@
 //
 
 #include <vector>
+#include <iostream>
 #include "Simulation.h"
 #include "ParameterParser.h"
 #include "DiskWind.h"
+#include <mpi.h>
 
 
 void Simulation::runDiskDispersalAnalysis(char* parseString)
@@ -25,7 +27,7 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
     int time = (int)pMap["time"];           // total duration of the Simulation in yr
     double luminosity = pMap["luminosity"]; // luminosity of the central star
     double rg = pMap["rg"];                 // gravitational radius - limit for photoevaporation
-    int plasma = pMap["plasma"];            // plasma parameter as ration of gas pressure vs magnetic pressure
+    double plasma = pMap["plasma"];            // plasma parameter as ration of gas pressure vs magnetic pressure
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
@@ -42,6 +44,10 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
 
 void Simulation::runOrdinarySimulation(char *parseString)
 {
+    const int root_process = 0;
+    const int current_id = MPI::COMM_WORLD.Get_rank();
+    const int processors = MPI::COMM_WORLD.Get_size();
+
     std::map<std::string, double> pMap = ParameterParser::parseFile(parseString);
 
     bool restart = (bool)pMap["restart"];
@@ -56,13 +62,14 @@ void Simulation::runOrdinarySimulation(char *parseString)
     double floorDensity = pMap["floor"];
     double luminosity = pMap["luminosity"];
     double rg = pMap["rg"];
-    int plasma = pMap["plasma"];
+    double plasma = pMap["plasma"];
     int frames = (int)pMap["frames"];
     int time = (int)pMap["time"];
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
     disk->setParameters(a, mass, luminosity, rg, 4.0, frames, g, plasma);
+
 
     if (restart) {
         int restartFrame = (int)pMap["restartframe"];

@@ -9,6 +9,7 @@
 #include <sstream>
 #include <fstream>
 #include <iterator>
+#include <mpi.h>
 
 DiskWind::DiskWind()
 {
@@ -46,7 +47,8 @@ void DiskWind::writeFrame()
     for (int i = 0; i < NGrid; i++)
     {
         std::stringstream ss;
-        ss << data[i].x << " " << data[i].y / data[i].x << " " << data[i].mdot;
+        double pos = g->convertIndexToPosition(i);
+        ss << pos << " " << data[i].y / pos;
         stringOutput.push_back(ss.str());
     }
     std::ostringstream tempStream;
@@ -59,10 +61,10 @@ void DiskWind::writeFrame()
 
 void DiskWind::computedx()
 {
-    dx = data[1].x - data[0].x;  //Determining the smallest dx in data
+    dx = g->convertIndexToPosition(1) - g->convertIndexToPosition(0);  //Determining the smallest dx in data
     if (NGrid > 2) {
         for (int i = 2; i < NGrid; i++) {
-            double temp = data[i].x - data[i-1].x;
+            double temp = g->convertIndexToPosition(i) - g->convertIndexToPosition(i - 1);
             if (temp < dx) {
                 dx = temp;
             }
@@ -72,11 +74,11 @@ void DiskWind::computedx()
 
 void DiskWind::computedt()
 {
-    double x = data[1].x - data[0].x;
+    double x = g->convertIndexToPosition(1) - g->convertIndexToPosition(0);
     dt = 0.25 * pow(x, 1.5)/viscousConstant;
 
     for (int i = 2; i < NGrid; i++) {
-        x = pow((data[i].x - data[i-1].x), 1.5);
+        x = pow((g->convertIndexToPosition(i) - g->convertIndexToPosition(i - 1)), 1.5);
         double temp = 0.25 * x / viscousConstant;
         if (temp < dt) {
             dt = temp;
@@ -117,7 +119,7 @@ double DiskWind::constantLeverArm()
 }
 
 
-double DiskWind::computeFluxDiff(int i)
+double DiskWind::computeFluxDiff(const int i)
 {
     double rPlus = g->convertIndexToPosition(i + 1.0);
     double rPlusHalf = g->convertIndexToPosition(i + 0.5);
@@ -151,34 +153,91 @@ double DiskWind::computeFluxDiff(int i)
 
 void DiskWind::step()
 {
-    Point *tempData = (Point *)malloc(NGrid * sizeof(Point));
 
+    // Determine MPI Data
+    const int root_process = 0;
+    const int current_id = MPI::COMM_WORLD.Get_rank();
+    const int processors = MPI::COMM_WORLD.Get_size();
+    const int chunksize = NGrid / processors;
 
-    for (int i = 0; i < NGrid; i++) {
-        double fluxDiff = computeFluxDiff(i);
-        double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
-        tempData[i].y = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(data[i].x) * data[i].x);
-    }
+    // Root process controls the remaining cores
+    if (current_id == root_process)
+    {
+        // temporary storage for all chunks
+        double *tempData = (double *)malloc((chunksize + 1) * sizeof(double));
 
+        // boundaries are exchanged
+        MPI::COMM_WORLD.Send(&data[chunksize - 1].y, 1, MPI_DOUBLE, root_process + 1, 0);
+        MPI::COMM_WORLD.Recv(&data[chunksize].y, 1, MPI_DOUBLE, root_process + 1, 1);
 
-    for (int i = 0; i < NGrid; i++) {
-        if (tempData[i].y / data[i].x < floorDensity)
-        {
-            data[i].y = floorDensity * data[i].x;
-        } else {
-            data[i].y = tempData[i].y;
+        // root process computes his chunk
+        for (int i = 0; i < chunksize; i++) {
+            double fluxDiff = computeFluxDiff(i);
+            double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
+            double r  = g->convertIndexToPosition(i);
+            tempData[i] = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(r) * r);
         }
-        data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+
+        for (int i = 0; i < chunksize; i++) {
+            double r = g->convertIndexToPosition(i);
+            if (tempData[i] / r < floorDensity)
+            {
+                data[i].y = floorDensity * r;
+            } else {
+                data[i].y = tempData[i];
+            }
+            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+        }
+
+        free(tempData);
+
+        frame++;
         if (frame % frameStride == 0) {
-            std::cout << frame << ": " << g->convertIndexToPosition(i) << ": " << leverArmAtCell(i) << std::endl;
+            double *buffer = (double *)malloc((chunksize + 1) * sizeof(double));
+            MPI::COMM_WORLD.Recv(buffer, chunksize + 1, MPI_DOUBLE, root_process + 1, 2);
+
+            for (int i = chunksize; i < NGrid; i++) {
+                data[i].y = buffer[i - chunksize];
+            }
+
+            free(buffer);
+            writeFrame();
         }
-    }
+    } else {
 
-    free(tempData);
+        int minIndex = current_id * chunksize;
+        int maxIndex = minIndex + chunksize;
 
-    frame++;
-    if (frame % frameStride == 0) {
-        writeFrame();
+        MPI::COMM_WORLD.Recv(&data[minIndex - 1].y, 1, MPI_DOUBLE, root_process, 0);
+        MPI::COMM_WORLD.Send(&data[minIndex].y, 1, MPI_DOUBLE, root_process, 1);
+
+        double *tempData = (double *)malloc((chunksize + 1) * sizeof(double));
+
+        for (int i = minIndex; i < maxIndex; i++) {
+            double fluxDiff = computeFluxDiff(i);
+            double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
+            double r  = g->convertIndexToPosition(i);
+            tempData[i - minIndex] = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(r) * r);
+        }
+
+        for (int i = minIndex; i < maxIndex; i++) {
+            double r = g->convertIndexToPosition(i);
+            if (tempData[i - minIndex] / r < floorDensity)
+            {
+                data[i].y = floorDensity * r;
+                tempData[i - minIndex] = floorDensity * r;
+            } else {
+                data[i].y = tempData[i - minIndex];
+            }
+            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+        }
+
+        frame++;
+        if (frame % frameStride == 0) {
+            MPI::COMM_WORLD.Send(tempData, chunksize + 1, MPI_DOUBLE, root_process, 2);
+        }
+
+        free(tempData);
     }
 }
 
@@ -209,13 +268,13 @@ void DiskWind::initWithRestartData(int lastFrame)
             }
             i++;
         } else {
-            if (!(iss >> data[i-1].x >> data[i-1].y))
+            double x;
+            if (!(iss >> x >> data[i-1].y))
             {
                 std::cout << "Error while parsing restart file" << std::endl;
                 break;
             } else {
-                data[i-1].y *= data[i-1].x;
-                data[i-1].mdot = 0.0;
+                data[i-1].y *= g->convertIndexToPosition(i - 1);
             }
             i++;
         }
@@ -223,7 +282,7 @@ void DiskWind::initWithRestartData(int lastFrame)
 }
 
 
-void DiskWind::setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry, int plasmaParameter)
+void DiskWind::setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry, double plasmaParameter)
 {
     alpha = a;
     M = mass;
@@ -299,7 +358,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArm
             step();
             bool dispersed = false;
             for (int j = 60; j < 75; j++) {
-                if (data[j].y / data[j].x <= 2*floorDensity)
+                if (data[j].y / g->convertIndexToPosition(j) <= 2*floorDensity)
                 {
                     std::cout << "For lambda = " << leverArms->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
                     dispersalFile << leverArms->at(i) << " " << dt/year * k << std::endl;

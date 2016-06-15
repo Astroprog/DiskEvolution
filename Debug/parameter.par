@@ -1,6 +1,6 @@
 restart=0
 logscale=1
-ngrid=160
+ngrid=256
 rin=0.1
 rout=2000
 rg=1e14
@@ -10,7 +10,7 @@ luminosity=1e41
 diskmass=0.025
 floor=0.000001
 rscale=10
-frames=10
+frames=5
 restartframe=1000
-time=100000
+time=50000
 plasma=1e4

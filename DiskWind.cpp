@@ -17,7 +17,12 @@ DiskWind::DiskWind()
     frame = 0;
     frameStride = 1;
     outputFrame = 0;
-    data = (Point *)malloc(NGrid * sizeof(Point));
+    data = new Point[NGrid];
+
+    const int processors = MPI::COMM_WORLD.Get_size();
+    const int chunksize = NGrid / processors;
+
+    tempData = new double[chunksize + 1];
 }
 
 DiskWind::DiskWind(int ncells)
@@ -26,12 +31,18 @@ DiskWind::DiskWind(int ncells)
     frame = 0;
     frameStride = 1;
     outputFrame = 0;
-    data = (Point *)malloc(NGrid * sizeof(Point));
+    data = new Point[NGrid];
+
+    const int processors = MPI::COMM_WORLD.Get_size();
+    const int chunksize = NGrid / processors;
+
+    tempData = new double[chunksize + 1];
 }
 
 DiskWind::~DiskWind()
 {
-    free(data);
+    delete[](data);
+    delete[](tempData);
     delete(g);
 }
 
@@ -142,7 +153,7 @@ double DiskWind::computeFluxDiff(const int i)
     }
 
     if (frame == 1) {
-        std::cout << g->convertIndexToPosition(i) << ": " << leverArmAtCell(i) << std::endl;
+//        std::cout << g->convertIndexToPosition(i) << ": " << leverArmAtCell(i) << std::endl;
     }
 
     Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) - 2 * (leverArmAtCell(i) - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
@@ -153,7 +164,6 @@ double DiskWind::computeFluxDiff(const int i)
 
 void DiskWind::step()
 {
-
     // Determine MPI Data
     const int root_process = 0;
     const int current_id = MPI::COMM_WORLD.Get_rank();
@@ -163,9 +173,6 @@ void DiskWind::step()
     //Single processor
 
     if (processors == 1) {
-        // temporary storage for all cells
-        double *tempData = (double *)malloc(chunksize * sizeof(double));
-
         // root process computes his chunk
         for (int i = 0; i < chunksize; i++) {
             double fluxDiff = computeFluxDiff(i);
@@ -185,17 +192,12 @@ void DiskWind::step()
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
-        free(tempData);
-
         frame++;
         if (frame % frameStride == 0) {
             writeFrame();
         }
     } else if (current_id == root_process)     // Root process controls the remaining cores when multiprocessing is used
     {
-        // temporary storage for all chunks
-        double *tempData = (double *)malloc((chunksize + 1) * sizeof(double));
-
         // boundaries are exchanged
         for (int proc = root_process + 1; proc <= processors-1; proc++) {
             if (proc == processors) {
@@ -234,25 +236,24 @@ void DiskWind::step()
 
         frame++;
         if (frame % frameStride == 0) {
-
             for (int proc = root_process + 1; proc <= processors-1; proc++) {
-                double *buffer = (double *)malloc((chunksize + 1) * sizeof(double));
-                MPI::COMM_WORLD.Recv(buffer, chunksize + 1, MPI_DOUBLE, proc, frameRecv);
+
+                double *buffer = (double *)malloc(chunksize * sizeof(double));
+                MPI::COMM_WORLD.Recv(buffer, chunksize, MPI_DOUBLE, proc, frameRecv);
 
                 for (int i = proc * chunksize; i < (proc + 1) * chunksize; i++) {
                     data[i].y = buffer[i - proc * chunksize];
                 }
 
                 free(buffer);
+
+
             }
 
             writeFrame();
         }
 
-        free(tempData);
-
     } else {
-
         int minIndex = current_id * chunksize;
         int maxIndex = minIndex + chunksize;
 
@@ -260,11 +261,10 @@ void DiskWind::step()
             MPI::COMM_WORLD.Recv(&data[minIndex - 1].y, 1, MPI_DOUBLE, root_process, initSendLow); // receiving lower boundary
         } else {
             MPI::COMM_WORLD.Recv(&data[minIndex - 1].y, 1, MPI_DOUBLE, root_process, initSendLow); // receiving lower boundary
-            MPI::COMM_WORLD.Recv(&data[maxIndex + 1].y, 1, MPI_DOUBLE, root_process, initSendHigh); // receiving upper boundary
+            MPI::COMM_WORLD.Recv(&data[maxIndex].y, 1, MPI_DOUBLE, root_process, initSendHigh); // receiving upper boundary
         }
 
 
-        double *tempData = (double *)malloc((chunksize + 1) * sizeof(double));
 
         for (int i = minIndex; i < maxIndex; i++) {
             double fluxDiff = computeFluxDiff(i);
@@ -285,17 +285,17 @@ void DiskWind::step()
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
+
+
         MPI::COMM_WORLD.Send(&data[minIndex].y, 1, MPI_DOUBLE, root_process, finalRecvLow);
         if (current_id < processors) {
-            MPI::COMM_WORLD.Send(&data[maxIndex].y, 1, MPI_DOUBLE, root_process, finalRecvHigh);
+            MPI::COMM_WORLD.Send(&data[maxIndex - 1].y, 1, MPI_DOUBLE, root_process, finalRecvHigh);
         }
 
         frame++;
         if (frame % frameStride == 0) {
-            MPI::COMM_WORLD.Send(tempData, chunksize + 1, MPI_DOUBLE, root_process, frameRecv);
+            MPI::COMM_WORLD.Send(tempData, chunksize, MPI_DOUBLE, root_process, frameRecv);
         }
-
-        free(tempData);
     }
 }
 
@@ -375,7 +375,7 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
         double scaleHeight = soundSpeed / sqrt(G*M/pow(data[i].x * au, 3));
         double midplaneDensity = data[i].y / data[i].x / (sqrt(2 * M_PI) * scaleHeight);
         double B2 = 8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
-        std::cout << "Magnetic flux density: " << data[i].x << ": " << sqrt(B2) << std::endl;
+        // std::cout << "Magnetic flux density: " << data[i].x << ": " << sqrt(B2) << std::endl;
         data[i].B2 = B2;
     }
 

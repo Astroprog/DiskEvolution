@@ -49,6 +49,7 @@ private:
     double year = 3.1536e7;
     GridGeometry *g;
     Point *data;
+    double *tempData;
 
 public:
 

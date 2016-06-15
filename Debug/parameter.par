@@ -1,6 +1,6 @@
 restart=0
 logscale=1
-ngrid=256
+ngrid=128
 rin=0.1
 rout=2000
 rg=1e14

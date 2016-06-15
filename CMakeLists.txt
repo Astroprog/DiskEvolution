@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(DiskEvolution)
 
+MESSAGE("-- System: " ${CMAKE_SYSTEM_NAME})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set(CMAKE_C_COMPILER /usr/lib64/openmpi/bin/mpicc)

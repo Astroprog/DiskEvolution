@@ -19,12 +19,14 @@ private:
         double B2;
     };
 
+    enum mpiTag {initSendLow, initSendHigh, finalRecvLow, finalRecvHigh, frameRecv};
+
     double alpha;
-    double au = 1.5e13;
-    double G = 6.67e-8;
+    double au = 1.495978707e13;
+    double G = 6.67408e-8;
     double M;
-    double kb = 1.38e-16;
-    double mp = 1.67e-24;
+    double kb = 1.38064852e-16;
+    double mp = 1.672621898e-24;
     double T0 = 280;
     double leverArm;
     double floorDensity;
@@ -44,9 +46,10 @@ private:
     double currentTime;
     double dx;
     double dt;
-    double year = 3.15e7;
+    double year = 3.1536e7;
     GridGeometry *g;
     Point *data;
+    double *tempData;
 
 public:
 

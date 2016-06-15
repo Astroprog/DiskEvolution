@@ -19,6 +19,8 @@ private:
         double B2;
     };
 
+    enum mpiTag {initSendLow, initSendHigh, finalRecvLow, finalRecvHigh, frameRecv};
+
     double alpha;
     double au = 1.495978707e13;
     double G = 6.67408e-8;

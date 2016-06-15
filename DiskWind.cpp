@@ -197,8 +197,14 @@ void DiskWind::step()
         double *tempData = (double *)malloc((chunksize + 1) * sizeof(double));
 
         // boundaries are exchanged
-        MPI::COMM_WORLD.Send(&data[chunksize - 1].y, 1, MPI_DOUBLE, root_process + 1, 0);
-        MPI::COMM_WORLD.Recv(&data[chunksize].y, 1, MPI_DOUBLE, root_process + 1, 1);
+        for (int proc = root_process + 1; proc <= processors-1; proc++) {
+            if (proc == processors) {
+                MPI::COMM_WORLD.Send(&data[proc * chunksize - 1].y, 1, MPI_DOUBLE, proc, initSendLow); // sending lower boundary
+            } else {
+                MPI::COMM_WORLD.Send(&data[proc * chunksize - 1].y, 1, MPI_DOUBLE, proc, initSendLow); // sending lower boundary
+                MPI::COMM_WORLD.Send(&data[(proc + 1) * chunksize].y, 1, MPI_DOUBLE, proc, initSendHigh); // sending upper boundary
+            }
+        }
 
         // root process computes his chunk
         for (int i = 0; i < chunksize; i++) {
@@ -219,27 +225,44 @@ void DiskWind::step()
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
-        free(tempData);
+        for (int proc = root_process + 1; proc <= processors-1; proc++) {
+            MPI::COMM_WORLD.Recv(&data[proc * chunksize].y, 1, MPI_DOUBLE, proc, finalRecvLow);
+            if (proc < processors) {
+                MPI::COMM_WORLD.Recv(&data[(proc + 1) * chunksize - 1].y, 1, MPI_DOUBLE, proc, finalRecvHigh);
+            }
+        }
 
         frame++;
         if (frame % frameStride == 0) {
-            double *buffer = (double *)malloc((chunksize + 1) * sizeof(double));
-            MPI::COMM_WORLD.Recv(buffer, chunksize + 1, MPI_DOUBLE, root_process + 1, 2);
 
-            for (int i = chunksize; i < NGrid; i++) {
-                data[i].y = buffer[i - chunksize];
+            for (int proc = root_process + 1; proc <= processors-1; proc++) {
+                double *buffer = (double *)malloc((chunksize + 1) * sizeof(double));
+                MPI::COMM_WORLD.Recv(buffer, chunksize + 1, MPI_DOUBLE, proc, frameRecv);
+
+                for (int i = proc * chunksize; i < (proc + 1) * chunksize; i++) {
+                    data[i].y = buffer[i - proc * chunksize];
+                }
+
+                free(buffer);
             }
 
-            free(buffer);
             writeFrame();
         }
+
+        free(tempData);
+
     } else {
 
         int minIndex = current_id * chunksize;
         int maxIndex = minIndex + chunksize;
 
-        MPI::COMM_WORLD.Recv(&data[minIndex - 1].y, 1, MPI_DOUBLE, root_process, 0);
-        MPI::COMM_WORLD.Send(&data[minIndex].y, 1, MPI_DOUBLE, root_process, 1);
+        if (current_id == processors) {
+            MPI::COMM_WORLD.Recv(&data[minIndex - 1].y, 1, MPI_DOUBLE, root_process, initSendLow); // receiving lower boundary
+        } else {
+            MPI::COMM_WORLD.Recv(&data[minIndex - 1].y, 1, MPI_DOUBLE, root_process, initSendLow); // receiving lower boundary
+            MPI::COMM_WORLD.Recv(&data[maxIndex + 1].y, 1, MPI_DOUBLE, root_process, initSendHigh); // receiving upper boundary
+        }
+
 
         double *tempData = (double *)malloc((chunksize + 1) * sizeof(double));
 
@@ -262,9 +285,14 @@ void DiskWind::step()
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
+        MPI::COMM_WORLD.Send(&data[minIndex].y, 1, MPI_DOUBLE, root_process, finalRecvLow);
+        if (current_id < processors) {
+            MPI::COMM_WORLD.Send(&data[maxIndex].y, 1, MPI_DOUBLE, root_process, finalRecvHigh);
+        }
+
         frame++;
         if (frame % frameStride == 0) {
-            MPI::COMM_WORLD.Send(tempData, chunksize + 1, MPI_DOUBLE, root_process, 2);
+            MPI::COMM_WORLD.Send(tempData, chunksize + 1, MPI_DOUBLE, root_process, frameRecv);
         }
 
         free(tempData);

@@ -160,8 +160,38 @@ void DiskWind::step()
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
 
-    // Root process controls the remaining cores
-    if (current_id == root_process)
+    //Single processor
+
+    if (processors == 1) {
+        // temporary storage for all cells
+        double *tempData = (double *)malloc(chunksize * sizeof(double));
+
+        // root process computes his chunk
+        for (int i = 0; i < chunksize; i++) {
+            double fluxDiff = computeFluxDiff(i);
+            double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
+            double r  = g->convertIndexToPosition(i);
+            tempData[i] = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(r) * r);
+        }
+
+        for (int i = 0; i < chunksize; i++) {
+            double r = g->convertIndexToPosition(i);
+            if (tempData[i] / r < floorDensity)
+            {
+                data[i].y = floorDensity * r;
+            } else {
+                data[i].y = tempData[i];
+            }
+            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+        }
+
+        free(tempData);
+
+        frame++;
+        if (frame % frameStride == 0) {
+            writeFrame();
+        }
+    } else if (current_id == root_process)     // Root process controls the remaining cores when multiprocessing is used
     {
         // temporary storage for all chunks
         double *tempData = (double *)malloc((chunksize + 1) * sizeof(double));

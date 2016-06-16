@@ -25,6 +25,15 @@ public:
         }
     }
 
+    double convertPositionToIndex(double r)
+    {
+        if (logscale) {
+            return (log10(r) - offset) / scaleFactor;
+        } else {
+            return (r - offset) / scaleFactor;
+        }
+    }
+
     static double gaussian(double mu, double sigma, double x);
 };
 

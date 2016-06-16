@@ -35,7 +35,7 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
     disk->initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
 
     std::vector<double> *lambda = new std::vector<double>;
-    for (double i = 2.4; i < 10.0; i = i + 0.1) {
+    for (double i = 5.0; i < 20.0; i = i + 0.1) {
         lambda->push_back(i);
     }
 
@@ -44,10 +44,6 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
 
 void Simulation::runOrdinarySimulation(char *parseString)
 {
-    const int root_process = 0;
-    const int current_id = MPI::COMM_WORLD.Get_rank();
-    const int processors = MPI::COMM_WORLD.Get_size();
-
     std::map<std::string, double> pMap = ParameterParser::parseFile(parseString);
 
     bool restart = (bool)pMap["restart"];

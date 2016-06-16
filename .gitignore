@@ -1,10 +1,4 @@
-*
-
-!*.cpp
-!*.h
-!CMakeLists.txt
-!*.py
-!*.par
-!Debug/dispersalPlot.py
-!Debug/densityPlot.py
-!Debug/parameter.par
+Debug/frame*
+Debug/DiskEvolution
+Debug/dispersal.dat
+.idea

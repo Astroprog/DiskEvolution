@@ -448,7 +448,13 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
         dispersalFile.open("dispersal.dat");
 
         for (unsigned int i = 0; i < parameters->size(); i++) {
-            leverArm = parameters->at(i);
+
+            if (parameterType == "lambda") {
+                leverArm = parameters->at(i);
+            } else if (parameterType == "plasma") {
+                plasma = parameters->at(i);
+            }
+
             frame = 0;
             outputFrame = 0;
             initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
@@ -481,7 +487,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 }
 
                 if (recvDispersed || dispersedInRoot) {
-                    std::cout << "For lambda = " << parameters->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
+                        std::cout << "For " << parameterType << " = " << parameters->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
                     dispersalFile << parameters->at(i) << " " << dt/year * k << std::endl;
                     break;
                 }
@@ -492,7 +498,13 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
     } else {
 
         for (unsigned int i = 0; i < parameters->size(); i++) {
-            leverArm = parameters->at(i);
+            
+            if (parameterType == "lambda") {
+                leverArm = parameters->at(i);
+            } else if (parameterType == "plasma") {
+                plasma = parameters->at(i);
+            }
+
             frame = 0;
             outputFrame = 0;
             initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);

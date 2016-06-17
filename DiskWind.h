@@ -6,6 +6,7 @@
 #define DISKEVOLUTION_DISKWIND_H
 
 #include <vector>
+#include <string>
 #include "GridGeometry.h"
 
 class DiskWind {
@@ -71,7 +72,7 @@ public:
     void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor);
 
     void runSimulation(int years);
-    void runDispersalAnalysis(int timeLimit, std::vector<double>* leverArms);
+    void runDispersalAnalysis(int timeLimit, std::vector<double>* parameters, const std::string parameterType);
     void restartSimulation(int lastFrame, int years);
     void initWithRestartData(int lastFrame);
 

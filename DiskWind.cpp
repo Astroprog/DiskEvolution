@@ -152,8 +152,8 @@ double DiskWind::computeFluxDiff(const int i)
         yPlus = 0.0;
     }
 
-    Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) - 2 * (constantLeverArm() - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
-    Fleft = viscousConstant * (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus)) - 2 * (constantLeverArm() - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf);
+    Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) - 2 * (leverArmAtCell(i) - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
+    Fleft = viscousConstant * (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus)) - 2 * (leverArmAtCell(i) - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf);
     return Fright - Fleft;
 }
 
@@ -185,7 +185,7 @@ void DiskWind::step()
             } else {
                 data[i].y = tempData[i];
             }
-            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+//            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
         frame++;
@@ -220,7 +220,7 @@ void DiskWind::step()
             } else {
                 data[i].y = tempData[i];
             }
-            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+//            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
         for (int proc = root_process + 1; proc <= processors-1; proc++) {
@@ -278,7 +278,7 @@ void DiskWind::step()
             } else {
                 data[i].y = tempData[i - minIndex];
             }
-            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+//            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
 
@@ -394,7 +394,7 @@ void DiskWind::restartSimulation(int lastFrame, int years)
     }
 }
 
-void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArms)
+void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* parameters, const std::string parameterType)
 {
     double NSteps = (double)timeLimit * year / dt;
     frameStride = (int)(NSteps / (double)maxFrames);
@@ -411,8 +411,14 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArm
         std::ofstream dispersalFile;
         dispersalFile.open("dispersal.dat");
 
-        for (unsigned int i = 0; i < leverArms->size(); i++) {
-            leverArm = leverArms->at(i);
+        for (unsigned int i = 0; i < parameters->size(); i++) {
+
+            if (parameterType == "lambda") {
+                leverArm = parameters->at(i);
+            } else if (parameterType == "plasma") {
+                plasma = parameters->at(i);
+            }
+
             frame = 0;
             outputFrame = 0;
             initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
@@ -423,8 +429,8 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArm
                 for (int j = minIndex; j < maxIndex; j++) {
                     if (data[j].y / g->convertIndexToPosition(j) <= 2*floorDensity)
                     {
-                        std::cout << "For lambda = " << leverArms->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
-                        dispersalFile << leverArms->at(i) << " " << dt/year * k << std::endl;
+                        std::cout << "For " << parameterType << " = " << parameters->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
+                        dispersalFile << parameters->at(i) << " " << dt/year * k << std::endl;
                         dispersed = true;
                     }
                 }
@@ -441,8 +447,8 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArm
         std::ofstream dispersalFile;
         dispersalFile.open("dispersal.dat");
 
-        for (unsigned int i = 0; i < leverArms->size(); i++) {
-            leverArm = leverArms->at(i);
+        for (unsigned int i = 0; i < parameters->size(); i++) {
+            leverArm = parameters->at(i);
             frame = 0;
             outputFrame = 0;
             initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
@@ -475,8 +481,8 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArm
                 }
 
                 if (recvDispersed || dispersedInRoot) {
-                    std::cout << "For lambda = " << leverArms->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
-                    dispersalFile << leverArms->at(i) << " " << dt/year * k << std::endl;
+                    std::cout << "For lambda = " << parameters->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
+                    dispersalFile << parameters->at(i) << " " << dt/year * k << std::endl;
                     break;
                 }
             }
@@ -485,8 +491,8 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* leverArm
         dispersalFile.close();
     } else {
 
-        for (unsigned int i = 0; i < leverArms->size(); i++) {
-            leverArm = leverArms->at(i);
+        for (unsigned int i = 0; i < parameters->size(); i++) {
+            leverArm = parameters->at(i);
             frame = 0;
             outputFrame = 0;
             initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);

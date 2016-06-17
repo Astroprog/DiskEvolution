@@ -59,7 +59,7 @@ void DiskWind::writeFrame()
     {
         std::stringstream ss;
         double pos = g->convertIndexToPosition(i);
-        ss << pos << " " << data[i].y / pos;
+        ss << pos << " " << data[i].y / pos << " " << sqrt(data[i].B2) << " " << leverArmAtCell(i);
         stringOutput.push_back(ss.str());
     }
     std::ostringstream tempStream;
@@ -234,14 +234,18 @@ void DiskWind::step()
         if (frame % frameStride == 0) {
             for (int proc = root_process + 1; proc <= processors-1; proc++) {
 
-                double *buffer = (double *)malloc(chunksize * sizeof(double));
+                double *buffer = new double[chunksize];
+                double *magneticBuffer = new double[chunksize];
                 MPI::COMM_WORLD.Recv(buffer, chunksize, MPI_DOUBLE, proc, frameRecv);
+                MPI::COMM_WORLD.Recv(magneticBuffer, chunksize, MPI_DOUBLE, proc, frameRecv);
 
                 for (int i = proc * chunksize; i < (proc + 1) * chunksize; i++) {
                     data[i].y = buffer[i - proc * chunksize];
+                    data[i].B2 = magneticBuffer[i - proc * chunksize];
                 }
 
-                free(buffer);
+                delete[](buffer);
+                delete[](magneticBuffer);
 
 
             }
@@ -290,7 +294,14 @@ void DiskWind::step()
 
         frame++;
         if (frame % frameStride == 0) {
+            double *bfield = new double[chunksize];
+            for (int i = minIndex; i < maxIndex; i++) {
+                bfield[i - minIndex] = data[i].B2;
+            }
             MPI::COMM_WORLD.Send(tempData, chunksize, MPI_DOUBLE, root_process, frameRecv);
+            MPI::COMM_WORLD.Send(bfield, chunksize, MPI_DOUBLE, root_process, frameRecv);
+
+            delete[](bfield);
         }
     }
 }

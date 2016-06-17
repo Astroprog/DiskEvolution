@@ -42,7 +42,7 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
 
     const std::string parameterType = "plasma";
 
-    disk->runDispersalAnalysis(20000000, parameters, parameterType);
+    disk->runDispersalAnalysis(50000000, parameters, parameterType);
 }
 
 void Simulation::runOrdinarySimulation(char *parseString)

@@ -149,7 +149,7 @@ double DiskWind::computeFluxDiff(const int i)
     if (i == 0) {
         yMinus = y;
     } else if (i == NGrid - 1) {
-        yPlus = 0.0;
+        yPlus = y;
     }
 
     Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) - 2 * (leverArmAtCell(i) - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);

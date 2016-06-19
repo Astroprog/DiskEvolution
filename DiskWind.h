@@ -65,7 +65,7 @@ public:
     double computeFluxDiff(int i);
 
     double densityLossAtRadius(double r);
-    double leverArmAtCell(int i);
+    double leverArmAtCell(double i);
     double constantLeverArm();
 
     void setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry, double plasmaParameter);

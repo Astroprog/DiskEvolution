@@ -112,12 +112,12 @@ double DiskWind::densityLossAtRadius(double r)
     }
 }
 
-double DiskWind::leverArmAtCell(int i)
+double DiskWind::leverArmAtCell(double i)
 {
     double windloss = densityLossAtRadius(g->convertIndexToPosition(i));
     if (windloss != 0.0)
     {
-        double mu = 4.0 * M_PI * densityLossAtRadius(g->convertIndexToPosition(i)) * sqrt(G * M / (g->convertIndexToPosition(i) * au)) / data[i].B2;
+        double mu = 4.0 * M_PI * windloss * sqrt(G * M / (g->convertIndexToPosition(i) * au)) / (0.5 * (data[(int)floor(i)].B2 + data[(int)ceil(i)].B2));
         return 1.5 * (1.0 + pow(mu, -2.0/3.0));
     } else {
         return 1.0;
@@ -152,8 +152,8 @@ double DiskWind::computeFluxDiff(const int i)
         yPlus = y;
     }
 
-    Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) - 2 * (leverArmAtCell(i) - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
-    Fleft = viscousConstant * (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus)) - 2 * (leverArmAtCell(i) - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf);
+    Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) + 2 * (leverArmAtCell(i + 0.5) - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
+    Fleft = viscousConstant * (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus)) + 2 * (leverArmAtCell(i - 0.5) - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf);
     if (i == NGrid - 1) {
         return 0.0;
     } else {
@@ -214,6 +214,9 @@ void DiskWind::step()
             double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
             double r  = g->convertIndexToPosition(i);
             tempData[i] = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(r) * r);
+            if (frame % frameStride == 0) {
+                std::cout << "Frame: " << frame/frameStride << " R: " << r << ", fluxdiff: " << fluxDiff << std::endl;
+            }
         }
 
         for (int i = 0; i < chunksize; i++) {
@@ -317,6 +320,7 @@ double DiskWind::getUpdatedMagneticFluxDensityAtCell(int i)
     double midplaneDensity = data[i].y / data[i].x / (sqrt(2 * M_PI) * scaleHeight);
     return  8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
 }
+
 
 void DiskWind::initWithRestartData(int lastFrame)
 {

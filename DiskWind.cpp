@@ -183,12 +183,7 @@ void DiskWind::step()
 
         for (int i = 0; i < chunksize; i++) {
             double r = g->convertIndexToPosition(i);
-            if (tempData[i] / r < floorDensity)
-            {
-                data[i].y = floorDensity * r;
-            } else {
-                data[i].y = tempData[i];
-            }
+            data[i].y = tempData[i];
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
@@ -218,12 +213,7 @@ void DiskWind::step()
 
         for (int i = 0; i < chunksize; i++) {
             double r = g->convertIndexToPosition(i);
-            if (tempData[i] / r < floorDensity)
-            {
-                data[i].y = floorDensity * r;
-            } else {
-                data[i].y = tempData[i];
-            }
+            data[i].y = tempData[i];
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
@@ -279,13 +269,7 @@ void DiskWind::step()
 
         for (int i = minIndex; i < maxIndex; i++) {
             double r = g->convertIndexToPosition(i);
-            if (tempData[i - minIndex] / r < floorDensity)
-            {
-                data[i].y = floorDensity * r;
-                tempData[i - minIndex] = floorDensity * r;
-            } else {
-                data[i].y = tempData[i - minIndex];
-            }
+            data[i].y = tempData[i - minIndex];
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
@@ -378,9 +362,6 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
     for (int i = 0; i < NGrid; i++) {
         data[i].x = g->convertIndexToPosition(i);
         data[i].y = initialDiskMass / (2 * M_PI * au * au * radialScaleFactor * data[i].x) * exp(-data[i].x / radialScaleFactor) * data[i].x;
-        if (data[i].y / data[i].x < floorDensity) {
-            data[i].y = floorDensity * data[i].x;
-        }
         data[i].mdot = 0.0;
 
         double soundSpeed = sqrt(kb * T0 / (2.3 * mp * sqrt(data[i].x)));

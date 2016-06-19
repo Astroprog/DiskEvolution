@@ -7,7 +7,7 @@ int main(int argc, char** argv)
     MPI::Init(argc, argv);
 
     if (argc == 2){
-        Simulation::runDiskDispersalAnalysis(argv[1]);
+        Simulation::runOrdinarySimulation(argv[1]);
     } else {
         std::cout << "No parameter file specified" << std::endl;
     }

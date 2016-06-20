@@ -199,7 +199,7 @@ void DiskWind::step()
 
         for (int i = 0; i < chunksize; i++) {
             data[i].y = tempData[i];
-            //data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
         frame++;
@@ -229,7 +229,7 @@ void DiskWind::step()
 
         for (int i = 0; i < chunksize; i++) {
             data[i].y = tempData[i];
-            //data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
         for (int proc = root_process + 1; proc <= processors-1; proc++) {
@@ -284,7 +284,7 @@ void DiskWind::step()
 
         for (int i = minIndex; i < maxIndex; i++) {
             data[i].y = tempData[i - minIndex];
-            //data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
 

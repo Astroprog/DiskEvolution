@@ -456,13 +456,13 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 bool dispersedInRoot = false;
                 for (int j = minIndex; j < maxIndex; j++) {
                     if (data[j].y / g->convertIndexToPosition(j) <= floorDensity) {
-                        std::cout << "IN ROOOOT! THE ROOT OF ALL EVIL!!!" << std::endl;
                         dispersedInRoot = true;
                         break;
                     }
                 }
 
                 bool recvDispersed = false;
+                std::cout << "recvDispersed: 465 : " << recvDispersed << std::endl;
 
                 for (int proc = root_process + 1; proc <= processors - 1; proc++) {
                     MPI::COMM_WORLD.Recv(&recvDispersed, 1, MPI_C_BOOL, proc, dispersalRecv);
@@ -471,15 +471,24 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                     }
                 }
 
+                std::cout << "recvDispersed: 474 : " << recvDispersed << std::endl;
+
                 if (dispersedInRoot) {
                     recvDispersed = true;
                 }
+
+                std::cout << "recvDispersed: 480 : " << recvDispersed << std::endl;
+
 
                 for (int proc = root_process + 1; proc <= processors - 1; proc++) {
                     MPI::COMM_WORLD.Send(&recvDispersed, 1, MPI_C_BOOL, proc, dispersalSend);
                 }
 
+                std::cout << "recvDispersed: 467 : " << recvDispersed << std::endl;
+
                 if (recvDispersed) {
+                    std::cout << "recvDispersed: 490 : " << recvDispersed << std::endl;
+
                     std::cout << "For " << parameterType << " = " << parameters->at(i) <<
                     ", disk dispersal is reached after " << dt / year * k << " years." << std::endl;
                     dispersalFile << parameters->at(i) << " " << dt / year * k << std::endl;
@@ -505,7 +514,6 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 MPI::COMM_WORLD.Recv(&disperalReached, 1, MPI_C_BOOL, root_process, dispersalSend);
 
                 if (disperalReached) {
-                    std::cout << "Dispersal Reached at proc " << current_id << std::endl;
                     break;
                 }
             }

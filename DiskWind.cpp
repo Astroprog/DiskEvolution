@@ -101,9 +101,10 @@ void DiskWind::computedt()
 
 void DiskWind::determineCurrentDiskExtent()
 {
-    double extent;
+    double extent = 0.0;
     for (int i = NGrid - 1; i >= 0; i--) {
         if (data[i].y / data[i].x > floorDensity) {
+            std::cout << data[i].y / data[i].x << " " << g->convertIndexToPosition(i) << std::endl;
             extent = g->convertIndexToPosition(i);
             currentDiskExtent = extent;
             break;

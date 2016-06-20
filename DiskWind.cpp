@@ -413,7 +413,6 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
     const int chunksize = NGrid / processors;
 
     const int minIndex = (int)g->convertPositionToIndex(5.0);
-    const int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 100.0);
 
     if (processors == 1) {
         std::ofstream dispersalFile;
@@ -430,6 +429,9 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
             frame = 0;
             outputFrame = 0;
             initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
+
+            int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 100.0);
+
 
             for (int k = 0; dt/year * k < timeLimit; k++) {
                 step();
@@ -466,6 +468,9 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
             frame = 0;
             outputFrame = 0;
             initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
+
+            int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 100.0);
+
 
             for (int k = 0; dt/year * k < timeLimit; k++) {
                 step();
@@ -516,6 +521,9 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
             frame = 0;
             outputFrame = 0;
             initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
+
+            int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 100.0);
+
 
             for (int k = 0; dt/year * k < timeLimit; k++) {
                 step();

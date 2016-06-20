@@ -3,7 +3,6 @@
 //
 
 #include "DiskWind.h"
-#include <cstdlib>
 #include <iostream>
 #include <vector>
 #include <sstream>
@@ -101,7 +100,7 @@ void DiskWind::computedt()
 
 void DiskWind::determineCurrentDiskExtent()
 {
-    double extent = 0.0;
+    double extent;
     for (int i = NGrid - 1; i >= 0; i--) {
         if (data[i].y / data[i].x > floorDensity) {
             extent = g->convertIndexToPosition(i);
@@ -224,7 +223,6 @@ void DiskWind::step()
         }
 
         for (int i = 0; i < chunksize; i++) {
-            double r = g->convertIndexToPosition(i);
             data[i].y = tempData[i];
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }

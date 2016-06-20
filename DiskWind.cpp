@@ -456,6 +456,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 bool dispersedInRoot = false;
                 for (int j = minIndex; j < maxIndex; j++) {
                     if (data[j].y / g->convertIndexToPosition(j) <= floorDensity) {
+                        std::cout << "IN ROOOOT! THE ROOT OF ALL EVIL!!!" << std::endl;
                         dispersedInRoot = true;
                         break;
                     }

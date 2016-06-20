@@ -475,6 +475,10 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 }
 
                 if (dispersed) {
+                    for (int proc = root_process + 1; proc <= processors-1; proc++)
+                    {
+                        MPI::COMM_WORLD.Send(&dispersed, 1, MPI_C_BOOL, proc, dispersalSend);
+                    }
                     break;
                 }
 
@@ -485,6 +489,11 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
             for (int k = 0; dt / year * k < timeLimit; k++) {
                 step();
                 MPI::COMM_WORLD.Send(tempData, chunksize, MPI_DOUBLE, root_process, frameRecv);
+                bool dispersed = false;
+                MPI::COMM_WORLD.Recv(&dispersed, 1, MPI_C_BOOL, root_process, dispersalRecv);
+                if (dispersed) {
+                    break;
+                }
             }
         }
     }

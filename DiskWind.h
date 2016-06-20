@@ -63,7 +63,6 @@ public:
     void step();
     void computedt();
     void computedx();
-    void determineCurrentDiskExtent();
     double getUpdatedMagneticFluxDensityAtCell(int i);
     double computeFluxDiff(int i);
 

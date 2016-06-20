@@ -439,8 +439,8 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 for (int j = minIndex; j < maxIndex; j++) {
                     if (data[j].y / g->convertIndexToPosition(j) <= floorDensity) {
                         std::cout << "For " << parameterType << " = " << parameters->at(i) <<
-                        ", disk dispersal is reached after " << dt / year * k << " years." << std::endl;
-                        dispersalFile << parameters->at(i) << " " << dt / year * k << std::endl;
+                        ", disk dispersal is reached after " << dt / year * k << " years, at radius " << g->convertIndexToPosition(j) << std::endl;
+                        dispersalFile << parameters->at(i) << " " << dt / year * k << " " << g->convertIndexToPosition(j) << std::endl;
                         dispersed = true;
                     }
                 }
@@ -468,8 +468,8 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 for (int j = minIndex; j < maxIndex; j++) {
                     if (data[j].y / g->convertIndexToPosition(j) <= floorDensity) {
                         std::cout << "For " << parameterType << " = " << parameters->at(i) <<
-                        ", disk dispersal is reached after " << dt / year * k << " years." << std::endl;
-                        dispersalFile << parameters->at(i) << " " << dt / year * k << std::endl;
+                        ", disk dispersal is reached after " << dt / year * k << " years, at radius " << g->convertIndexToPosition(j) << std::endl;
+                        dispersalFile << parameters->at(i) << " " << dt / year * k << " " << g->convertIndexToPosition(j) << std::endl;
                         dispersed = true;
                     }
                 }

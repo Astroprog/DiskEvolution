@@ -1,3 +1,5 @@
+// main.cpp
+
 #include "Simulation.h"
 #include <iostream>
 #include <mpi.h>

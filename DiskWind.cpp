@@ -99,6 +99,18 @@ void DiskWind::computedt()
     std::cout << "Timestep: " << dt << std::endl;
 }
 
+void DiskWind::determineCurrentDiskExtent()
+{
+    double extent = 0.0;
+    for (int i = NGrid - 1; i >= 0; i--) {
+        if (data[i].y / data[i].x > floorDensity) {
+            extent = g->convertIndexToPosition(i);
+            currentDiskExtent = extent;
+            break;
+        }
+    }
+}
+
 
 double DiskWind::densityLossAtRadius(double r)
 {
@@ -182,7 +194,6 @@ void DiskWind::step()
         }
 
         for (int i = 0; i < chunksize; i++) {
-            double r = g->convertIndexToPosition(i);
             data[i].y = tempData[i];
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
@@ -190,6 +201,7 @@ void DiskWind::step()
         frame++;
         if (frame % frameStride == 0) {
             writeFrame();
+            determineCurrentDiskExtent();
         }
     } else if (current_id == root_process)     // Root process controls the remaining cores when multiprocessing is used
     {
@@ -240,11 +252,11 @@ void DiskWind::step()
 
                 delete[](buffer);
                 delete[](magneticBuffer);
-
-
             }
 
             writeFrame();
+            determineCurrentDiskExtent();
+            std::cout << currentDiskExtent << std::endl;
         }
 
     } else {
@@ -268,7 +280,6 @@ void DiskWind::step()
         }
 
         for (int i = minIndex; i < maxIndex; i++) {
-            double r = g->convertIndexToPosition(i);
             data[i].y = tempData[i - minIndex];
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
@@ -368,11 +379,11 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
         double scaleHeight = soundSpeed / sqrt(G*M/pow(data[i].x * au, 3));
         double midplaneDensity = data[i].y / data[i].x / (sqrt(2 * M_PI) * scaleHeight);
         double B2 = 8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
-        // std::cout << "Magnetic flux density: " << data[i].x << ": " << sqrt(B2) << std::endl;
         data[i].B2 = B2;
     }
 
     writeFrame();
+    determineCurrentDiskExtent();
     computedx();
     computedt();
 }
@@ -402,7 +413,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
     const int chunksize = NGrid / processors;
 
     const int minIndex = (int)g->convertPositionToIndex(5.0);
-    const int maxIndex = (int)g->convertPositionToIndex(10.0);
+    const int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 100.0);
 
     if (processors == 1) {
         std::ofstream dispersalFile;
@@ -424,7 +435,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 step();
                 bool dispersed = false;
                 for (int j = minIndex; j < maxIndex; j++) {
-                    if (data[j].y / g->convertIndexToPosition(j) <= 2*floorDensity)
+                    if (data[j].y / g->convertIndexToPosition(j) <= floorDensity)
                     {
                         std::cout << "For " << parameterType << " = " << parameters->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
                         dispersalFile << parameters->at(i) << " " << dt/year * k << std::endl;
@@ -460,7 +471,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 step();
                 bool dispersedInRoot = false;
                 for (int j = minIndex; j < maxIndex; j++) {
-                    if (data[j].y / g->convertIndexToPosition(j) <= 2*floorDensity)
+                    if (data[j].y / g->convertIndexToPosition(j) <= floorDensity)
                     {
                         dispersedInRoot = true;
                     }
@@ -510,7 +521,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 step();
                 bool dispersed = false;
                 for (int j = minIndex; j < maxIndex; j++) {
-                    if (data[j].y / g->convertIndexToPosition(j) <= 2*floorDensity)
+                    if (data[j].y / g->convertIndexToPosition(j) <= floorDensity)
                     {
                         std::cout << "Process " << current_id << " detected disk dispersal" << std::endl;
                         dispersed = true;

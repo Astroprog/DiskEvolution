@@ -38,6 +38,7 @@ private:
     double photoRadius;
     double viscousConstant;
     double plasma;
+    double currentDiskExtent;
     int NGrid;
     int frame;
     int maxFrames;
@@ -61,6 +62,7 @@ public:
     void step();
     void computedt();
     void computedx();
+    void determineCurrentDiskExtent();
     double getUpdatedMagneticFluxDensityAtCell(int i);
     double computeFluxDiff(int i);
 

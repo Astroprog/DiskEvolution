@@ -64,6 +64,7 @@ public:
     void computedt();
     void computedx();
     double getUpdatedMagneticFluxDensityAtCell(int i);
+    void determineDiskExtent();
     double computeFluxDiff(int i);
 
     double densityLossAtRadius(double r);

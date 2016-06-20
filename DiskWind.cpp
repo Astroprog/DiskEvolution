@@ -187,19 +187,16 @@ void DiskWind::step()
 
         for (int i = 0; i < chunksize; i++) {
             data[i].y = tempData[i];
+            if (data[i].y / data[i].x < floorDensity) {
+                data[i].y = floorDensity * data[i].x;
+            }
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
         frame++;
         if (frame % frameStride == 0) {
+            determineDiskExtent();
             writeFrame();
-            for (int i = NGrid - 1; i >= 0; i--) {
-                if (data[i].y / data[i].x > floorDensity) {
-                    std::cout << data[i].y / data[i].x << " " << g->convertIndexToPosition(i) << std::endl;
-                    currentDiskExtent = g->convertIndexToPosition(i);
-                    break;
-                }
-            }
         }
     } else if (current_id == root_process)     // Root process controls the remaining cores when multiprocessing is used
     {
@@ -223,6 +220,9 @@ void DiskWind::step()
 
         for (int i = 0; i < chunksize; i++) {
             data[i].y = tempData[i];
+            if (data[i].y / data[i].x < floorDensity) {
+                data[i].y = floorDensity * data[i].x;
+            }
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
@@ -250,15 +250,7 @@ void DiskWind::step()
                 delete[](buffer);
                 delete[](magneticBuffer);
             }
-
-            for (int i = NGrid - 1; i >= 0; i--) {
-                if (data[i].y / data[i].x > floorDensity) {
-                    std::cout << data[i].y / data[i].x << " " << g->convertIndexToPosition(i) << std::endl;
-                    currentDiskExtent = g->convertIndexToPosition(i);
-                    break;
-                }
-            }
-
+            determineDiskExtent();
             writeFrame();
         }
 
@@ -284,6 +276,9 @@ void DiskWind::step()
 
         for (int i = minIndex; i < maxIndex; i++) {
             data[i].y = tempData[i - minIndex];
+            if (data[i].y / data[i].x < floorDensity) {
+                data[i].y = floorDensity * data[i].x;
+            }
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
@@ -303,14 +298,6 @@ void DiskWind::step()
             MPI::COMM_WORLD.Send(tempData, chunksize, MPI_DOUBLE, root_process, frameRecv);
             MPI::COMM_WORLD.Send(bfield, chunksize, MPI_DOUBLE, root_process, frameBRecv);
 
-            for (int i = NGrid - 1; i >= 0; i--) {
-                if (data[i].y / data[i].x > floorDensity) {
-                    std::cout << data[i].y / data[i].x << " " << g->convertIndexToPosition(i) << std::endl;
-                    currentDiskExtent = g->convertIndexToPosition(i);
-                    break;
-                }
-            }
-
             delete[](bfield);
         }
     }
@@ -322,6 +309,17 @@ double DiskWind::getUpdatedMagneticFluxDensityAtCell(int i)
     double scaleHeight = soundSpeed / sqrt(G*M/pow(data[i].x * au, 3));
     double midplaneDensity = data[i].y / data[i].x / (sqrt(2 * M_PI) * scaleHeight);
     return  8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
+}
+
+void DiskWind::determineDiskExtent()
+{
+    for (int i = NGrid - 1; i >= 0; i--) {
+        if (data[i].y / data[i].x > floorDensity) {
+            currentDiskExtent = g->convertIndexToPosition(i);
+            std::cout << currentDiskExtent << std::endl;
+            break;
+        }
+    }
 }
 
 
@@ -384,6 +382,9 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
     for (int i = 0; i < NGrid; i++) {
         data[i].x = g->convertIndexToPosition(i);
         data[i].y = initialDiskMass / (2 * M_PI * au * au * radialScaleFactor * data[i].x) * exp(-data[i].x / radialScaleFactor) * data[i].x;
+        if (data[i].y / data[i].x < floorDensity) {
+            data[i].y = floorDensity * data[i].x;
+        }
         data[i].mdot = 0.0;
 
         double soundSpeed = sqrt(kb * T0 / (2.3 * mp * sqrt(data[i].x)));
@@ -393,14 +394,7 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
         data[i].B2 = B2;
     }
 
-    for (int i = NGrid - 1; i >= 0; i--) {
-        if (data[i].y / data[i].x > floorDensity) {
-            std::cout << data[i].y / data[i].x << " " << g->convertIndexToPosition(i) << std::endl;
-            currentDiskExtent = g->convertIndexToPosition(i);
-            break;
-        }
-    }
-
+    determineDiskExtent();
     writeFrame();
     computedx();
     computedt();

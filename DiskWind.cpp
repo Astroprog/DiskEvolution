@@ -412,35 +412,35 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
 
+    std::ofstream dispersalFile;
+    dispersalFile.open("dispersal.dat");
+
     const int minIndex = (int)g->convertPositionToIndex(5.0);
 
-    if (processors == 1) {
-        std::ofstream dispersalFile;
-        dispersalFile.open("dispersal.dat");
+    for (unsigned int i = 0; i < parameters->size(); i++) {
 
-        for (unsigned int i = 0; i < parameters->size(); i++) {
+        if (parameterType == "lambda") {
+            leverArm = parameters->at(i);
+        } else if (parameterType == "plasma") {
+            plasma = parameters->at(i);
+        }
 
-            if (parameterType == "lambda") {
-                leverArm = parameters->at(i);
-            } else if (parameterType == "plasma") {
-                plasma = parameters->at(i);
-            }
+        frame = 0;
+        outputFrame = 0;
+        initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
 
-            frame = 0;
-            outputFrame = 0;
-            initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
+        int maxIndex = (int) g->convertPositionToIndex(currentDiskExtent - 100.0);
 
-            int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 100.0);
+        if (processors == 1) {
 
-
-            for (int k = 0; dt/year * k < timeLimit; k++) {
+            for (int k = 0; dt / year * k < timeLimit; k++) {
                 step();
                 bool dispersed = false;
                 for (int j = minIndex; j < maxIndex; j++) {
-                    if (data[j].y / g->convertIndexToPosition(j) <= floorDensity)
-                    {
-                        std::cout << "For " << parameterType << " = " << parameters->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
-                        dispersalFile << parameters->at(i) << " " << dt/year * k << std::endl;
+                    if (data[j].y / g->convertIndexToPosition(j) <= floorDensity) {
+                        std::cout << "For " << parameterType << " = " << parameters->at(i) <<
+                        ", disk dispersal is reached after " << dt / year * k << " years." << std::endl;
+                        dispersalFile << parameters->at(i) << " " << dt / year * k << std::endl;
                         dispersed = true;
                     }
                 }
@@ -449,36 +449,13 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                     break;
                 }
             }
-        }
+        } else if (current_id == root_process) {
 
-        dispersalFile.close();
-    } else if (current_id == root_process) {
-
-        std::ofstream dispersalFile;
-        dispersalFile.open("dispersal.dat");
-
-        for (unsigned int i = 0; i < parameters->size(); i++) {
-
-            if (parameterType == "lambda") {
-                leverArm = parameters->at(i);
-            } else if (parameterType == "plasma") {
-                plasma = parameters->at(i);
-            }
-
-            frame = 0;
-            outputFrame = 0;
-            initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
-
-            int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 100.0);
-
-
-
-            for (int k = 0; dt/year * k < timeLimit; k++) {
+            for (int k = 0; dt / year * k < timeLimit; k++) {
                 step();
                 bool dispersedInRoot = false;
                 for (int j = minIndex; j < maxIndex; j++) {
-                    if (data[j].y / g->convertIndexToPosition(j) <= floorDensity)
-                    {
+                    if (data[j].y / g->convertIndexToPosition(j) <= floorDensity) {
                         dispersedInRoot = true;
                         break;
                     }
@@ -493,8 +470,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                     }
                 }
 
-                if (dispersedInRoot)
-                {
+                if (dispersedInRoot) {
                     recvDispersed = true;
                 }
 
@@ -503,38 +479,21 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 }
 
                 if (recvDispersed) {
-                        std::cout << "For " << parameterType << " = " << parameters->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
-                    dispersalFile << parameters->at(i) << " " << dt/year * k << std::endl;
+                    std::cout << "For " << parameterType << " = " << parameters->at(i) <<
+                    ", disk dispersal is reached after " << dt / year * k << " years." << std::endl;
+                    dispersalFile << parameters->at(i) << " " << dt / year * k << std::endl;
                     break;
                 }
             }
-        }
+        } else {
 
-        dispersalFile.close();
-    } else {
-
-        for (unsigned int i = 0; i < parameters->size(); i++) {
-            
-            if (parameterType == "lambda") {
-                leverArm = parameters->at(i);
-            } else if (parameterType == "plasma") {
-                plasma = parameters->at(i);
-            }
-
-            frame = 0;
-            outputFrame = 0;
-            initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
-
-            int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 100.0);
-
-
-            for (int k = 0; dt/year * k < timeLimit; k++) {
+            for (int k = 0; dt / year * k < timeLimit; k++) {
                 step();
                 bool dispersed = false;
                 for (int j = minIndex; j < maxIndex; j++) {
-                    if (data[j].y / g->convertIndexToPosition(j) <= floorDensity)
-                    {
-                        std::cout << "Process " << current_id << " detected disk dispersal" << "for l " << leverArm << ", at position " << g->convertIndexToPosition(j) << std::endl;
+                    if (data[j].y / g->convertIndexToPosition(j) <= floorDensity) {
+                        std::cout << "Process " << current_id << " detected disk dispersal" << "for l " << leverArm <<
+                        ", at position " << g->convertIndexToPosition(j) << std::endl;
                         dispersed = true;
                         break;
                     }
@@ -545,12 +504,14 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                 MPI::COMM_WORLD.Recv(&disperalReached, 1, MPI_C_BOOL, root_process, dispersalSend);
 
                 if (disperalReached) {
+                    std::cout << "Dispersal Reached at proc " << current_id << std::endl;
                     break;
                 }
             }
         }
     }
 
+    dispersalFile.close();
 
 }
 

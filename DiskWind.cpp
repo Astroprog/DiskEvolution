@@ -240,7 +240,7 @@ void DiskWind::step()
                 double *buffer = new double[chunksize];
                 double *magneticBuffer = new double[chunksize];
                 MPI::COMM_WORLD.Recv(buffer, chunksize, MPI_DOUBLE, proc, frameRecv);
-                MPI::COMM_WORLD.Recv(magneticBuffer, chunksize, MPI_DOUBLE, proc, frameRecv);
+                MPI::COMM_WORLD.Recv(magneticBuffer, chunksize, MPI_DOUBLE, proc, frameBRecv);
 
                 for (int i = proc * chunksize; i < (proc + 1) * chunksize; i++) {
                     data[i].y = buffer[i - proc * chunksize];
@@ -301,7 +301,7 @@ void DiskWind::step()
                 bfield[i - minIndex] = data[i].B2;
             }
             MPI::COMM_WORLD.Send(tempData, chunksize, MPI_DOUBLE, root_process, frameRecv);
-            MPI::COMM_WORLD.Send(bfield, chunksize, MPI_DOUBLE, root_process, frameRecv);
+            MPI::COMM_WORLD.Send(bfield, chunksize, MPI_DOUBLE, root_process, frameBRecv);
 
             for (int i = NGrid - 1; i >= 0; i--) {
                 if (data[i].y / data[i].x > floorDensity) {

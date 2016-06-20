@@ -128,7 +128,12 @@ double DiskWind::leverArmAtCell(double i)
     double windloss = densityLossAtRadius(g->convertIndexToPosition(i));
     if (windloss != 0.0)
     {
-        double mu = 4.0 * M_PI * windloss * sqrt(G * M / (g->convertIndexToPosition(i) * au)) / (0.5 * (data[(int)floor(i)].B2 + data[(int)ceil(i)].B2));
+        double B2Averaged = 0.5 * (data[(int)floor(i)].B2 + data[(int)ceil(i)].B2);
+        if (ceil(i) == NGrid) {
+            B2Averaged = data[NGrid - 1].B2;
+        }
+
+        double mu = 4.0 * M_PI * windloss * sqrt(G * M / (g->convertIndexToPosition(i) * au)) / B2Averaged;
         return 1.5 * (1.0 + pow(mu, -2.0/3.0));
     } else {
         return 1.0;
@@ -163,8 +168,8 @@ double DiskWind::computeFluxDiff(const int i)
         yPlus = y;
     }
 
-    Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) + 2 * (constantLeverArm() - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
-    Fleft = viscousConstant * (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus)) + 2 * (constantLeverArm() - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf);
+    Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) + 2 * (leverArmAtCell(i + 0.5) - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
+    Fleft = viscousConstant * (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus)) + 2 * (leverArmAtCell(i - 0.5) - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf);
     if (i == NGrid - 1) {
         return 0.0;
     } else {
@@ -194,7 +199,7 @@ void DiskWind::step()
 
         for (int i = 0; i < chunksize; i++) {
             data[i].y = tempData[i];
-            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+            //data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
         frame++;
@@ -224,7 +229,7 @@ void DiskWind::step()
 
         for (int i = 0; i < chunksize; i++) {
             data[i].y = tempData[i];
-            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+            //data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
         for (int proc = root_process + 1; proc <= processors-1; proc++) {
@@ -279,7 +284,7 @@ void DiskWind::step()
 
         for (int i = minIndex; i < maxIndex; i++) {
             data[i].y = tempData[i - minIndex];
-            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+            //data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
 

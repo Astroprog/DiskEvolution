@@ -470,6 +470,8 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
             initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
 
             int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 100.0);
+            std::cout << "maxIndex on proc " << current_id << " is " << maxIndex << std::endl;
+
 
 
             for (int k = 0; dt/year * k < timeLimit; k++) {
@@ -523,6 +525,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
             initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
 
             int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 100.0);
+            std::cout << "maxIndex on proc " << current_id << " is " << maxIndex << std::endl;
 
 
             for (int k = 0; dt/year * k < timeLimit; k++) {

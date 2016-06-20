@@ -480,6 +480,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                     if (data[j].y / g->convertIndexToPosition(j) <= floorDensity)
                     {
                         dispersedInRoot = true;
+                        break;
                     }
                 }
 
@@ -492,15 +493,16 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                     }
                 }
 
-                for (int proc = root_process + 1; proc <= processors - 1; proc++) {
-                    if (dispersedInRoot) {
-                        MPI::COMM_WORLD.Send(&dispersedInRoot, 1, MPI_C_BOOL, proc, dispersalSend);
-                    } else {
-                        MPI::COMM_WORLD.Send(&recvDispersed, 1, MPI_C_BOOL, proc, dispersalSend);
-                    }
+                if (dispersedInRoot)
+                {
+                    recvDispersed = true;
                 }
 
-                if (recvDispersed || dispersedInRoot) {
+                for (int proc = root_process + 1; proc <= processors - 1; proc++) {
+                    MPI::COMM_WORLD.Send(&recvDispersed, 1, MPI_C_BOOL, proc, dispersalSend);
+                }
+
+                if (recvDispersed) {
                         std::cout << "For " << parameterType << " = " << parameters->at(i) << ", disk dispersal is reached after " << dt/year * k << " years." << std::endl;
                     dispersalFile << parameters->at(i) << " " << dt/year * k << std::endl;
                     break;
@@ -534,6 +536,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
                     {
                         std::cout << "Process " << current_id << " detected disk dispersal" << "for l " << leverArm << ", at position " << g->convertIndexToPosition(j) << std::endl;
                         dispersed = true;
+                        break;
                     }
                 }
 

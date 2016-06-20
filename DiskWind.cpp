@@ -453,62 +453,38 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
 
             for (int k = 0; dt / year * k < timeLimit; k++) {
                 step();
-                bool dispersedInRoot = false;
+
+                for (int proc = root_process + 1; proc <= processors-1; proc++) {
+                    double *buffer = new double[chunksize];
+                    MPI::COMM_WORLD.Recv(buffer, chunksize, MPI_DOUBLE, proc, frameRecv);
+
+                    for (int j = proc * chunksize; j < (proc + 1) * chunksize; j++) {
+                        data[j].y = buffer[j - proc * chunksize];
+                    }
+                    delete[](buffer);
+                }
+
+                bool dispersed = false;
                 for (int j = minIndex; j < maxIndex; j++) {
                     if (data[j].y / g->convertIndexToPosition(j) <= floorDensity) {
-                        dispersedInRoot = true;
-                        break;
+                        std::cout << "For " << parameterType << " = " << parameters->at(i) <<
+                        ", disk dispersal is reached after " << dt / year * k << " years." << std::endl;
+                        dispersalFile << parameters->at(i) << " " << dt / year * k << std::endl;
+                        dispersed = true;
                     }
                 }
 
-                bool recvDispersed = false;
-
-                for (int proc = root_process + 1; proc <= processors - 1; proc++) {
-                    MPI::COMM_WORLD.Recv(&recvDispersed, 1, MPI_C_BOOL, proc, dispersalRecv);
-                    if (recvDispersed) {
-                        break;
-                    }
-                }
-
-
-                if (dispersedInRoot) {
-                    recvDispersed = true;
-                }
-
-
-                for (int proc = root_process + 1; proc <= processors - 1; proc++) {
-                    MPI::COMM_WORLD.Send(&recvDispersed, 1, MPI_C_BOOL, proc, dispersalSend);
-                }
-
-
-                if (recvDispersed) {
-                    std::cout << "For " << parameterType << " = " << parameters->at(i) <<
-                    ", disk dispersal is reached after " << dt / year * k << " years." << std::endl;
-                    dispersalFile << parameters->at(i) << " " << dt / year * k << std::endl;
+                if (dispersed) {
                     break;
                 }
+
+
             }
         } else {
 
             for (int k = 0; dt / year * k < timeLimit; k++) {
                 step();
-                bool dispersed = false;
-                for (int j = minIndex; j < maxIndex; j++) {
-                    if (data[j].y / g->convertIndexToPosition(j) <= floorDensity) {
-                        std::cout << "Process " << current_id << " detected disk dispersal" << "for l " << leverArm <<
-                        ", at position " << g->convertIndexToPosition(j) << std::endl;
-                        dispersed = true;
-                        break;
-                    }
-                }
-
-                MPI::COMM_WORLD.Send(&dispersed, 1, MPI_C_BOOL, root_process, dispersalRecv);
-                bool disperalReached = false;
-                MPI::COMM_WORLD.Recv(&disperalReached, 1, MPI_C_BOOL, root_process, dispersalSend);
-
-                if (disperalReached) {
-                    break;
-                }
+                MPI::COMM_WORLD.Send(tempData, chunksize, MPI_DOUBLE, root_process, frameRecv);
             }
         }
     }

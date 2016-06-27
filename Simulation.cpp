@@ -72,7 +72,7 @@ void Simulation::runOrdinarySimulation(char *parseString)
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass, luminosity, rg, 1.0, frames, g, plasma);
+    disk->setParameters(a, mass, luminosity, rg, 10.0, frames, g, plasma);
 
     if (restart) {
         int restartFrame = (int)pMap["restartframe"];

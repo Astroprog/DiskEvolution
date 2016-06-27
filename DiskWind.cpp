@@ -5,6 +5,7 @@
 
 #include "DiskWind.h"
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <sstream>
 #include <fstream>
@@ -18,6 +19,9 @@ DiskWind::DiskWind()
     frameStride = 1;
     outputFrame = 0;
     data = new Point[NGrid];
+    accumulatedMassLossLeft = 0.0;
+    accumulatedMassLossRight = 0.0;
+    accumulatedWindLoss = 0.0;
 
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
@@ -32,6 +36,9 @@ DiskWind::DiskWind(int ncells)
     frameStride = 1;
     outputFrame = 0;
     data = new Point[NGrid];
+    accumulatedMassLossLeft = 0.0;
+    accumulatedMassLossRight = 0.0;
+    accumulatedWindLoss = 0.0;
 
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
@@ -133,7 +140,6 @@ double DiskWind::constantLeverArm()
     return leverArm;
 }
 
-
 double DiskWind::computeFluxDiff(const int i)
 {
     double rPlus = g->convertIndexToPosition(i + 1.0);
@@ -141,25 +147,48 @@ double DiskWind::computeFluxDiff(const int i)
     double r = g->convertIndexToPosition(i);
     double rMinusHalf = g->convertIndexToPosition(i - 0.5);
     double rMinus = g->convertIndexToPosition(i - 1.0);
+    double drPlus = g->convertIndexToPosition(i + 1.5) - g->convertIndexToPosition(i + 0.5);
+    double dr = g->convertIndexToPosition(i + 0.5) - g->convertIndexToPosition(i - 0.5);
 
     double yPlus = data[i + 1].y;
     double y = data[i].y;
     double yMinus = data[i - 1].y;
 
 
-
-    double Fleft, Fright;
-
     if (i == 0) {
         yMinus = y;
     } else if (i == NGrid - 1) {
-        yPlus = y;
+        yPlus = 0.0;
     }
 
+
     Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) + 2 * (constantLeverArm() - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
+
+    //double rightArea = M_PI * au * au * (pow(g->convertIndexToPosition(i + 1.5), 2) - pow(rPlusHalf, 2));
+    if (Fright / (drPlus * rPlus) * dt + densityLossAtRadius(rPlus) * dt >= yPlus / rPlus) {
+        Fright = 0.0;
+    }
+
     Fleft = viscousConstant * (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus)) + 2 * (constantLeverArm() - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf);
-    if (i == NGrid - 1) {
-        return 0.0;
+
+    if (Fleft / (dr * r) * dt + densityLossAtRadius(r) * dt >= y / r) {
+        Fleft = 0.0;
+    }
+
+    if (i == NGrid - 1) {   // No inflow possible
+        if (Fright > 0.0) {
+            Fright = 0.0;
+            return - Fleft;
+        } else {
+            return Fright - Fleft;
+        }
+    } else if (i == 0) {
+        if (Fleft < 0.0) {
+            Fleft = 0.0;
+            return Fright;
+        } else {
+            return Fright - Fleft;
+        }
     } else {
         return Fright - Fleft;
     }
@@ -180,16 +209,36 @@ void DiskWind::step()
         // root process computes his chunk
         for (int i = 0; i < chunksize; i++) {
             double fluxDiff = computeFluxDiff(i);
-            double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
+            double rPlusHalf = g->convertIndexToPosition(i + 0.5);
+            double rMinusHalf = g->convertIndexToPosition(i - 0.5);
+            double dr = rPlusHalf - rMinusHalf;
             double r  = g->convertIndexToPosition(i);
-            tempData[i] = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(r) * r);
+            double windloss = densityLossAtRadius(r);
+
+            tempData[i] = data[i].y + dt * fluxDiff / dr;
+
+            // Prevents surface density to become negative when more mass would be lost
+            // by the wind than existent
+
+            double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
+
+            if (windloss * r * dt >= tempData[i]) {
+                accumulatedWindLoss += tempData[i] / data[i].x * currentArea;
+                tempData[i] = 0.0;
+            } else {
+                tempData[i] -= windloss * r * dt;
+                accumulatedWindLoss += windloss * currentArea * dt;
+            }
+
+            if (i == 0) {
+                accumulatedMassLossLeft += Fleft / (dr * data[i].x) * dt * currentArea;
+            } else if (i == NGrid - 1) {
+                accumulatedMassLossRight += -Fright / (dr * data[i].x) * dt * currentArea;
+            }
         }
 
         for (int i = 0; i < chunksize; i++) {
             data[i].y = tempData[i];
-            if (data[i].y / data[i].x < floorDensity) {
-                data[i].y = floorDensity * data[i].x;
-            }
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
@@ -220,9 +269,6 @@ void DiskWind::step()
 
         for (int i = 0; i < chunksize; i++) {
             data[i].y = tempData[i];
-            if (data[i].y / data[i].x < floorDensity) {
-                data[i].y = floorDensity * data[i].x;
-            }
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
@@ -276,9 +322,6 @@ void DiskWind::step()
 
         for (int i = minIndex; i < maxIndex; i++) {
             data[i].y = tempData[i - minIndex];
-            if (data[i].y / data[i].x < floorDensity) {
-                data[i].y = floorDensity * data[i].x;
-            }
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
@@ -308,7 +351,7 @@ double DiskWind::getUpdatedMagneticFluxDensityAtCell(int i)
     double soundSpeed = sqrt(kb * T0 / (2.3 * mp * sqrt(data[i].x)));
     double scaleHeight = soundSpeed / sqrt(G*M/pow(data[i].x * au, 3));
     double midplaneDensity = data[i].y / data[i].x / (sqrt(2 * M_PI) * scaleHeight);
-    return  8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
+    return 8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
 }
 
 void DiskWind::determineDiskExtent()
@@ -320,6 +363,15 @@ void DiskWind::determineDiskExtent()
             break;
         }
     }
+}
+
+double DiskWind::computeDiskMass()
+{
+    double mass = 0.0;
+    for (int i = 0; i < NGrid; i++) {
+        mass += data[i].y / data[i].x * M_PI * au * au * (pow(g->convertIndexToPosition(i + 0.5), 2) - pow(g->convertIndexToPosition(i - 0.5), 2));
+    }
+    return mass;
 }
 
 
@@ -520,7 +572,43 @@ void DiskWind::runSimulation(int years)
     double NSteps = (double)years * year / dt;
     frameStride = (int)(NSteps / (double)maxFrames);
 
-    for (int i = 0; dt/year * i < years; i++) {
-        step();
+    const int root_process = 0;
+    const int current_id = MPI::COMM_WORLD.Get_rank();
+    const int processors = MPI::COMM_WORLD.Get_size();
+    const int chunksize = NGrid / processors;
+
+
+    if (processors == 1) {
+        for (int i = 0; dt/year * i < years; i++) {
+            step();
+            double currentMass = computeDiskMass();
+            if (frame % frameStride == 0) {
+                std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft << ", " << accumulatedMassLossRight << ", " << accumulatedWindLoss << std::endl;
+                std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + accumulatedWindLoss << std::endl << std::endl;
+            }
+        }
+    } else if (current_id == root_process) {
+        for (int i = 0; dt/year * i < years; i++) {
+            step();
+
+            for (int proc = root_process + 1; proc <= processors-1; proc++) {
+                double *buffer = new double[chunksize];
+                MPI::COMM_WORLD.Recv(buffer, chunksize, MPI_DOUBLE, proc, frameRecv);
+
+                for (int j = proc * chunksize; j < (proc + 1) * chunksize; j++) {
+                    data[j].y = buffer[j - proc * chunksize];
+                }
+                delete[](buffer);
+            }
+
+            double currentMass = computeDiskMass();
+            std::cout << frame << ": " << currentMass / M << std::endl;
+
+        }
+    } else {
+        for (int i = 0; dt/year * i < years; i++) {
+            step();
+            MPI::COMM_WORLD.Send(tempData, chunksize, MPI_DOUBLE, root_process, frameRecv);
+        }
     }
 }

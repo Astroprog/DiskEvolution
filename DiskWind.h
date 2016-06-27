@@ -50,6 +50,10 @@ private:
     double dx;
     double dt;
     double year = 3.1536e7;
+    double Fleft, Fright;
+    double accumulatedMassLossLeft;
+    double accumulatedMassLossRight;
+    double accumulatedWindLoss;
     GridGeometry *g;
     Point *data;
     double *tempData;
@@ -65,6 +69,7 @@ public:
     void computedx();
     double getUpdatedMagneticFluxDensityAtCell(int i);
     void determineDiskExtent();
+    double computeDiskMass();
     double computeFluxDiff(int i);
 
     double densityLossAtRadius(double r);

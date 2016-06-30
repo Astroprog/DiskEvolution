@@ -21,7 +21,7 @@ private:
         double B2;
     };
 
-    enum mpiTag {initSendLow, initSendHigh, finalRecvLow, finalRecvHigh, frameRecv, frameBRecv, dispersalSend};
+    enum mpiTag {initSendLow, initSendHigh, finalRecvLow, finalRecvHigh, frameRecv, frameBRecv, dispersalSend, massLossRight};
 
     double alpha;
     double au = 1.495978707e13;
@@ -50,13 +50,14 @@ private:
     double dx;
     double dt;
     double year = 3.1536e7;
-    double Fleft, Fright;
     double accumulatedMassLossLeft;
     double accumulatedMassLossRight;
     double accumulatedWindLoss;
     GridGeometry *g;
     Point *data;
     double *tempData;
+    double *windloss;
+    double *flux;
 
 public:
 
@@ -70,10 +71,11 @@ public:
     double getUpdatedMagneticFluxDensityAtCell(int i);
     void determineDiskExtent();
     double computeDiskMass();
-    double computeFluxDiff(int i);
+    void computeFluxes();
 
-    double densityLossAtRadius(double r);
-    double leverArmAtCell(double i);
+
+    double densityLossAtRadius(double r, int i);
+    double leverArmAtCell(double i, double currentWindloss);
     double constantLeverArm();
 
     void setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry, double plasmaParameter);

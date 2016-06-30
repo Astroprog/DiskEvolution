@@ -13,4 +13,4 @@ rscale=10
 frames=1000
 restartframe=1000
 time=10000000
-plasma=1e2
+plasma=1e3

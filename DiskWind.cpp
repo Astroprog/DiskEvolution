@@ -18,7 +18,6 @@ DiskWind::DiskWind()
     frame = 0;
     frameStride = 1;
     outputFrame = 0;
-    data = new Point[NGrid];
     accumulatedMassLossLeft = 0.0;
     accumulatedMassLossRight = 0.0;
     accumulatedWindLoss = 0.0;
@@ -26,7 +25,10 @@ DiskWind::DiskWind()
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
 
+    data = new Point[NGrid];
     tempData = new double[chunksize + 1];
+    windloss = new double[NGrid];
+    flux = new double[NGrid + 1];
 }
 
 DiskWind::DiskWind(int ncells)
@@ -35,7 +37,6 @@ DiskWind::DiskWind(int ncells)
     frame = 0;
     frameStride = 1;
     outputFrame = 0;
-    data = new Point[NGrid];
     accumulatedMassLossLeft = 0.0;
     accumulatedMassLossRight = 0.0;
     accumulatedWindLoss = 0.0;
@@ -43,13 +44,18 @@ DiskWind::DiskWind(int ncells)
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
 
+    data = new Point[NGrid];
     tempData = new double[chunksize + 1];
+    windloss = new double[NGrid];
+    flux = new double[NGrid + 1];
 }
 
 DiskWind::~DiskWind()
 {
     delete[](data);
     delete[](tempData);
+    delete[](windloss);
+    delete[](flux);
     delete(g);
 }
 
@@ -66,7 +72,7 @@ void DiskWind::writeFrame()
     {
         std::stringstream ss;
         double pos = g->convertIndexToPosition(i);
-        ss << pos << " " << data[i].y / pos << " " << sqrt(data[i].B2) << " " << leverArmAtCell(i);
+        ss << pos << " " << data[i].y / pos << " " << sqrt(data[i].B2) << " " << leverArmAtCell(i, densityLossAtRadius(g->convertIndexToPosition(i), i));
         stringOutput.push_back(ss.str());
     }
     std::ostringstream tempStream;
@@ -106,29 +112,31 @@ void DiskWind::computedt()
     std::cout << "Timestep: " << dt << std::endl;
 }
 
-double DiskWind::densityLossAtRadius(double r)
+double DiskWind::densityLossAtRadius(double r, int i)
 {
     if (r * au >= photoRadius) {
         double soundspeed = sqrt(kb * 1e4 / (2.3 * mp));
         double numberDensity = 5.7e4 * sqrt(luminosity / normLuminosity) * pow(photoRadius * 1e-14, -1.5) * pow(r * au / photoRadius, -2.5);
         double densityLoss = 2 * soundspeed * numberDensity * mp;
+        if (densityLoss * r * dt >= data[i].y) {
+            densityLoss = data[i].y / (r * dt);
+        }
         return densityLoss;
     } else {
         return 0.0;
     }
 }
 
-double DiskWind::leverArmAtCell(double i)
+double DiskWind::leverArmAtCell(double i, double currentWindloss)
 {
-    double windloss = densityLossAtRadius(g->convertIndexToPosition(i));
-    if (windloss != 0.0)
+    if (currentWindloss != 0.0)
     {
         double B2Averaged = 0.5 * (data[(int)floor(i)].B2 + data[(int)ceil(i)].B2);
         if (ceil(i) == NGrid) {
             B2Averaged = data[NGrid - 1].B2;
         }
 
-        double mu = 4.0 * M_PI * windloss * sqrt(G * M / (g->convertIndexToPosition(i) * au)) / B2Averaged;
+        double mu = 4.0 * M_PI * currentWindloss * sqrt(G * M / (g->convertIndexToPosition(i) * au)) / B2Averaged;
         return 1.5 * (1.0 + pow(mu, -2.0/3.0));
     } else {
         return 1.0;
@@ -140,60 +148,67 @@ double DiskWind::constantLeverArm()
     return leverArm;
 }
 
-double DiskWind::computeFluxDiff(const int i)
+
+
+void DiskWind::computeFluxes()
 {
-    double rPlus = g->convertIndexToPosition(i + 1.0);
-    double rPlusHalf = g->convertIndexToPosition(i + 0.5);
-    double r = g->convertIndexToPosition(i);
-    double rMinusHalf = g->convertIndexToPosition(i - 0.5);
-    double rMinus = g->convertIndexToPosition(i - 1.0);
-    double drPlus = g->convertIndexToPosition(i + 1.5) - g->convertIndexToPosition(i + 0.5);
-    double dr = g->convertIndexToPosition(i + 0.5) - g->convertIndexToPosition(i - 0.5);
+    for (int i = 0; i < NGrid + 1; i++) {
+        double r = g->convertIndexToPosition(i);
+        double rMinusHalf = g->convertIndexToPosition(i - 0.5);
+        double rMinus = g->convertIndexToPosition(i - 1.0);
+        double dr = g->convertIndexToPosition(i + 0.5) - rMinusHalf;
+        double drMinus = rMinusHalf - g->convertIndexToPosition(i - 1.5);
 
-    double yPlus = data[i + 1].y;
-    double y = data[i].y;
-    double yMinus = data[i - 1].y;
+        double y;
+        double yMinus;
 
+        double currentWindloss;
+        double currentWindlossMinus;
 
-    if (i == 0) {
-        yMinus = y;
-    } else if (i == NGrid - 1) {
-        yPlus = 0.0;
-    }
-
-
-    Fright = viscousConstant * (0.25 * (y + yPlus) + rPlusHalf * (yPlus - y) / (rPlus - r)) + 2 * (constantLeverArm() - 1) * rPlusHalf * rPlusHalf * densityLossAtRadius(rPlusHalf);
-
-    //double rightArea = M_PI * au * au * (pow(g->convertIndexToPosition(i + 1.5), 2) - pow(rPlusHalf, 2));
-    if (Fright / (drPlus * rPlus) * dt + densityLossAtRadius(rPlus) * dt >= yPlus / rPlus) {
-        Fright = 0.0;
-    }
-
-    Fleft = viscousConstant * (0.25 * (y + yMinus) + rMinusHalf * (y - yMinus) / (r - rMinus)) + 2 * (constantLeverArm() - 1) * rMinusHalf * rMinusHalf * densityLossAtRadius(rMinusHalf);
-
-    if (Fleft / (dr * r) * dt + densityLossAtRadius(r) * dt >= y / r) {
-        Fleft = 0.0;
-    }
-
-    if (i == NGrid - 1) {   // No inflow possible
-        if (Fright > 0.0) {
-            Fright = 0.0;
-            return - Fleft;
+        if (i == 0) {
+            y = data[i].y;
+            yMinus = y;
+            currentWindlossMinus = 0.0;
+            currentWindloss = windloss[i];
+        } else if (i == NGrid) {
+            yMinus = data[i - 1].y;
+            y = 0.0;
+            currentWindlossMinus = windloss[i - 1];
+            currentWindloss = 0.0;
         } else {
-            return Fright - Fleft;
+            y = data[i].y;
+            yMinus = data[i - 1].y;
+            currentWindloss = windloss[i];
+            currentWindlossMinus = windloss[i - 1];
         }
-    } else if (i == 0) {
-        if (Fleft < 0.0) {
-            Fleft = 0.0;
-            return Fright;
-        } else {
-            return Fright - Fleft;
+
+        double yMinusHalf = 0.5 * (y + yMinus);
+        double currentWindlossMinusHalf = 0.5 * (currentWindloss + currentWindlossMinus);
+
+        double viscousTerm = viscousConstant * (0.5 * yMinusHalf + rMinusHalf * (y - yMinus) / (r - rMinus));
+        double magneticTerm = 2 * (leverArmAtCell(i - 0.5, currentWindlossMinusHalf) - 1) * rMinusHalf * rMinusHalf * currentWindlossMinusHalf;
+
+        double currentFlux = viscousTerm + magneticTerm;
+
+        if (currentFlux * dt / dr >= y - currentWindloss * r * dt) {
+            currentFlux = (y - currentWindloss * r * dt) * dr / dt;
+        } else if (-currentFlux * dt / drMinus >= yMinus - currentWindlossMinus * rMinus * dt) {
+            currentFlux = -(yMinus - currentWindlossMinus * rMinus * dt) * drMinus / dt;
         }
-    } else {
-        return Fright - Fleft;
+
+        if (i == NGrid) {   // No inflow possible
+            if (currentFlux > 0.0) {
+                currentFlux = 0.0;
+            }
+        } else if (i == 0) {
+            if (currentFlux < 0.0) {
+                currentFlux = 0.0;
+            }
+        }
+
+        flux[i] = currentFlux;
     }
 }
-
 
 void DiskWind::step()
 {
@@ -203,42 +218,46 @@ void DiskWind::step()
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
 
+
     //Single processor
 
     if (processors == 1) {
-        // root process computes his chunk
+
+
+
+        for (int i = 0; i < NGrid; i++) {
+            windloss[i] = densityLossAtRadius(g->convertIndexToPosition(i), i);
+        }
+
+        computeFluxes();
+
         for (int i = 0; i < chunksize; i++) {
-            double fluxDiff = computeFluxDiff(i);
             double rPlusHalf = g->convertIndexToPosition(i + 0.5);
             double rMinusHalf = g->convertIndexToPosition(i - 0.5);
             double dr = rPlusHalf - rMinusHalf;
             double r  = g->convertIndexToPosition(i);
-            double windloss = densityLossAtRadius(r);
+            double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
 
-            tempData[i] = data[i].y + dt * fluxDiff / dr;
+            tempData[i] = data[i].y + dt * (flux[i + 1] - flux[i]) / dr;
 
             // Prevents surface density to become negative when more mass would be lost
             // by the wind than existent
 
-            double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
-
-            if (windloss * r * dt >= tempData[i]) {
-                accumulatedWindLoss += tempData[i] / data[i].x * currentArea;
-                tempData[i] = 0.0;
-            } else {
-                tempData[i] -= windloss * r * dt;
-                accumulatedWindLoss += windloss * currentArea * dt;
-            }
+            tempData[i] -= windloss[i] * r * dt;
+            accumulatedWindLoss += windloss[i] * currentArea * dt;
 
             if (i == 0) {
-                accumulatedMassLossLeft += Fleft / (dr * data[i].x) * dt * currentArea;
+                accumulatedMassLossLeft += flux[i] / (dr * data[i].x) * dt * currentArea;
             } else if (i == NGrid - 1) {
-                accumulatedMassLossRight += -Fright / (dr * data[i].x) * dt * currentArea;
+                accumulatedMassLossRight += -flux[i + 1] / (dr * data[i].x) * dt * currentArea;
             }
         }
 
         for (int i = 0; i < chunksize; i++) {
             data[i].y = tempData[i];
+            if (data[i].y < 0.0) {
+                data[i].y = 0.0;
+            }
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
@@ -249,6 +268,7 @@ void DiskWind::step()
         }
     } else if (current_id == root_process)     // Root process controls the remaining cores when multiprocessing is used
     {
+
         // boundaries are exchanged
         for (int proc = root_process + 1; proc <= processors-1; proc++) {
             if (proc == processors) {
@@ -259,16 +279,39 @@ void DiskWind::step()
             }
         }
 
+        for (int i = 0; i < NGrid; i++) {
+            windloss[i] = densityLossAtRadius(g->convertIndexToPosition(i), i);
+            double rPlusHalf = g->convertIndexToPosition(i + 0.5);
+            double rMinusHalf = g->convertIndexToPosition(i - 0.5);
+            double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
+            accumulatedWindLoss += windloss[i] * currentArea * dt;
+        }
+
         // root process computes his chunk
         for (int i = 0; i < chunksize; i++) {
-            double fluxDiff = computeFluxDiff(i);
-            double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
+//            double fluxDiff = computeFluxDiff(i);
+            double rPlusHalf = g->convertIndexToPosition(i + 0.5);
+            double rMinusHalf = g->convertIndexToPosition(i - 0.5);
+            double dr = rPlusHalf - rMinusHalf;
             double r  = g->convertIndexToPosition(i);
-            tempData[i] = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(r) * r);
+            double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
+
+//            tempData[i] = data[i].y + dt * fluxDiff / dr;
+
+            tempData[i] -= windloss[i] * r * dt;
+
+            if (i == 0) {
+//                accumulatedMassLossLeft += Fleft / (dr * data[i].x) * dt * currentArea;
+            } else if (i == NGrid - 1) {
+//                accumulatedMassLossRight += -Fright / (dr * data[i].x) * dt * currentArea;
+            }
         }
 
         for (int i = 0; i < chunksize; i++) {
             data[i].y = tempData[i];
+            if (data[i].y < 0.0) {
+                data[i].y = 0.0;
+            }
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
@@ -311,17 +354,36 @@ void DiskWind::step()
             MPI::COMM_WORLD.Recv(&data[maxIndex].y, 1, MPI_DOUBLE, root_process, initSendHigh); // receiving upper boundary
         }
 
+        for (int i = 0; i < NGrid; i++) {
+            windloss[i] = densityLossAtRadius(g->convertIndexToPosition(i), i);
+        }
 
 
         for (int i = minIndex; i < maxIndex; i++) {
-            double fluxDiff = computeFluxDiff(i);
-            double dr = g->convertIndexToPosition(i+0.5) - g->convertIndexToPosition(i-0.5);
+//            double fluxDiff = computeFluxDiff(i);
+            double rPlusHalf = g->convertIndexToPosition(i + 0.5);
+            double rMinusHalf = g->convertIndexToPosition(i - 0.5);
+            double dr = rPlusHalf - rMinusHalf;
             double r  = g->convertIndexToPosition(i);
-            tempData[i - minIndex] = data[i].y + dt * (fluxDiff / dr - densityLossAtRadius(r) * r);
+            double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
+
+//            tempData[i - minIndex] = data[i].y + dt * fluxDiff / dr;
+
+            tempData[i - minIndex] -= windloss[i] * r * dt;
+            accumulatedWindLoss += windloss[i] * currentArea * dt;
+
+            if (i == 0) {
+//                accumulatedMassLossLeft += Fleft / (dr * data[i].x) * dt * currentArea;
+            } else if (i == NGrid - 1) {
+//                accumulatedMassLossRight += -Fright / (dr * data[i].x) * dt * currentArea;
+            }
         }
 
         for (int i = minIndex; i < maxIndex; i++) {
             data[i].y = tempData[i - minIndex];
+            if (data[i].y < 0.0) {
+                data[i].y = 0.0;
+            }
             data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
         }
 
@@ -427,6 +489,9 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
 {
     std::cout << "Initializing grid of size " << NGrid << " with HCGA distribution" << std::endl;
 
+    computedx();
+    computedt();
+
     floorDensity = floor;
     radialScale = radialScaleFactor;
     diskMass = initialDiskMass;
@@ -448,8 +513,6 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
 
     determineDiskExtent();
     writeFrame();
-    computedx();
-    computedt();
 }
 
 
@@ -579,6 +642,7 @@ void DiskWind::runSimulation(int years)
 
 
     if (processors == 1) {
+
         for (int i = 0; dt/year * i < years; i++) {
             step();
             double currentMass = computeDiskMass();
@@ -588,6 +652,7 @@ void DiskWind::runSimulation(int years)
             }
         }
     } else if (current_id == root_process) {
+
         for (int i = 0; dt/year * i < years; i++) {
             step();
 
@@ -601,14 +666,23 @@ void DiskWind::runSimulation(int years)
                 delete[](buffer);
             }
 
+            MPI::COMM_WORLD.Recv(&accumulatedMassLossRight, 1, MPI_DOUBLE, processors - 1, massLossRight);
+
             double currentMass = computeDiskMass();
-            std::cout << frame << ": " << currentMass / M << std::endl;
+            if (frame % frameStride == 0) {
+                std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft << ", " << accumulatedMassLossRight << ", " << accumulatedWindLoss << std::endl;
+                std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + accumulatedWindLoss << std::endl << std::endl;
+            }
 
         }
     } else {
         for (int i = 0; dt/year * i < years; i++) {
             step();
             MPI::COMM_WORLD.Send(tempData, chunksize, MPI_DOUBLE, root_process, frameRecv);
+            if (current_id == processors - 1)
+            {
+                MPI::COMM_WORLD.Send(&accumulatedMassLossRight, 1, MPI_DOUBLE, root_process, massLossRight);
+            }
         }
     }
 }

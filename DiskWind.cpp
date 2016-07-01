@@ -267,7 +267,7 @@ void DiskWind::step()
 
         // boundaries are exchanged
         for (int proc = root_process + 1; proc <= processors-1; proc++) {
-            if (proc == processors - 1) {
+            if (proc == processors) {
                 MPI::COMM_WORLD.Send(&data[proc * chunksize - 1].y, 1, MPI_DOUBLE, proc, initSendLow); // sending lower boundary
                 MPI::COMM_WORLD.Send(&data[proc * chunksize - 1].B2, 1, MPI_DOUBLE, proc, initSendLow); // sending lower boundary
             } else {
@@ -316,7 +316,7 @@ void DiskWind::step()
         for (int proc = root_process + 1; proc <= processors-1; proc++) {
             MPI::COMM_WORLD.Recv(&data[proc * chunksize].y, 1, MPI_DOUBLE, proc, finalRecvLow);
             MPI::COMM_WORLD.Recv(&data[proc * chunksize].B2, 1, MPI_DOUBLE, proc, finalRecvLow);
-            if (proc < processors - 1) {
+            if (proc < processors) {
                 MPI::COMM_WORLD.Recv(&data[(proc + 1) * chunksize - 1].y, 1, MPI_DOUBLE, proc, finalRecvHigh);
                 MPI::COMM_WORLD.Recv(&data[(proc + 1) * chunksize - 1].B2, 1, MPI_DOUBLE, proc, finalRecvHigh);
             }
@@ -347,7 +347,7 @@ void DiskWind::step()
         int minIndex = current_id * chunksize;
         int maxIndex = minIndex + chunksize;
 
-        if (current_id == processors - 1) {
+        if (current_id == processors) {
             MPI::COMM_WORLD.Recv(&data[minIndex - 1].y, 1, MPI_DOUBLE, root_process, initSendLow); // receiving lower boundary
             MPI::COMM_WORLD.Recv(&data[minIndex - 1].B2, 1, MPI_DOUBLE, root_process, initSendLow); // receiving lower boundary
         } else {
@@ -396,7 +396,7 @@ void DiskWind::step()
         MPI::COMM_WORLD.Send(&data[minIndex].y, 1, MPI_DOUBLE, root_process, finalRecvLow);
         MPI::COMM_WORLD.Send(&data[minIndex].B2, 1, MPI_DOUBLE, root_process, finalRecvLow);
 
-        if (current_id < processors - 1) {
+        if (current_id < processors) {
             MPI::COMM_WORLD.Send(&data[maxIndex - 1].y, 1, MPI_DOUBLE, root_process, finalRecvHigh);
             MPI::COMM_WORLD.Send(&data[maxIndex - 1].B2, 1, MPI_DOUBLE, root_process, finalRecvHigh);
         }

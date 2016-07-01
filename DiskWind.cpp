@@ -569,7 +569,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
         outputFrame = 0;
         initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
 
-        int maxIndex = (int) g->convertPositionToIndex(currentDiskExtent - 100.0);
+        int maxIndex = (int) g->convertPositionToIndex(currentDiskExtent - 10.0);
 
         if (processors == 1) {
 
@@ -606,7 +606,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
 
                 bool dispersed = false;
                 for (int j = minIndex; j < maxIndex; j++) {
-                    if (data[j].y / g->convertIndexToPosition(j) <= floorDensity) {
+                    if (data[j].y / g->convertIndexToPosition(j) <= 0.01 * data[j + 5].y / g->convertIndexToPosition(j + 5)) {
                         std::cout << "For " << parameterType << " = " << parameters->at(i) <<
                         ", disk dispersal is reached after " << dt / year * k << " years, at radius " << g->convertIndexToPosition(j) << std::endl;
                         dispersalFile << parameters->at(i) << " " << dt / year * k << " " << g->convertIndexToPosition(j) << std::endl;
@@ -653,6 +653,9 @@ void DiskWind::runSimulation(int years)
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
 
+    std::ofstream massFile;
+    massFile.open("massloss.dat");
+
 
     if (processors == 1) {
 
@@ -662,6 +665,7 @@ void DiskWind::runSimulation(int years)
             if (frame % frameStride == 0) {
                 std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft << ", " << accumulatedMassLossRight << ", " << accumulatedWindLoss << std::endl;
                 std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + accumulatedWindLoss << std::endl << std::endl;
+                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t" << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t" << accumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + accumulatedWindLoss << std::endl;
             }
         }
     } else if (current_id == root_process) {
@@ -692,6 +696,7 @@ void DiskWind::runSimulation(int years)
             if (frame % frameStride == 0) {
                 std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft << ", " << accumulatedMassLossRight << ", " << totalAccumulatedWindLoss << std::endl;
                 std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << std::endl << std::endl;
+                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t" << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t" << accumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + accumulatedWindLoss << std::endl;
             }
 
         }
@@ -707,4 +712,6 @@ void DiskWind::runSimulation(int years)
             }
         }
     }
+
+    massFile.close();
 }

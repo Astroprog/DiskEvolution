@@ -188,7 +188,7 @@ void DiskWind::computeFluxes(int minIndex, int maxIndex)
         double viscousTerm = viscousConstant * (0.5 * yMinusHalf + rMinusHalf * (y - yMinus) / (r - rMinus));
         double magneticTerm = 2 * (leverArmAtCell(i - 0.5, currentWindlossMinusHalf) - 1) * rMinusHalf * rMinusHalf * currentWindlossMinusHalf;
 
-        double currentFlux = viscousTerm + magneticTerm;
+        double currentFlux = viscousTerm; //+ magneticTerm;
 
 
         if (currentFlux * dt / dr >= y - currentWindloss * r * dt) {

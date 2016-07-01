@@ -186,7 +186,7 @@ void DiskWind::computeFluxes(int minIndex, int maxIndex)
         double currentWindlossMinusHalf = 0.5 * (currentWindloss + currentWindlossMinus);
 
         double viscousTerm = viscousConstant * (0.5 * yMinusHalf + rMinusHalf * (y - yMinus) / (r - rMinus));
-        double magneticTerm = 2 * (leverArmAtCell(i - 0.5, currentWindlossMinusHalf) - 1) * rMinusHalf * rMinusHalf * currentWindlossMinusHalf;
+        double magneticTerm = 2 * (constantLeverArm() - 1) * rMinusHalf * rMinusHalf * currentWindlossMinusHalf;
 
         double currentFlux = viscousTerm + magneticTerm;
 
@@ -432,9 +432,8 @@ double DiskWind::getUpdatedMagneticFluxDensityAtCell(int i)
 void DiskWind::determineDiskExtent()
 {
     for (int i = NGrid - 1; i >= 0; i--) {
-        if (data[i].y / data[i].x > floorDensity) {
+        if (data[i].y / data[i].x > 2 * floorDensity) {
             currentDiskExtent = g->convertIndexToPosition(i);
-            std::cout << currentDiskExtent << std::endl;
             break;
         }
     }
@@ -556,6 +555,8 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
     dispersalFile.open("dispersal.dat");
 
     const int minIndex = (int)g->convertPositionToIndex(5.0);
+    determineDiskExtent();
+    std::cout << "Extent: " << currentDiskExtent << std::endl;
 
     for (unsigned int i = 0; i < parameters->size(); i++) {
 
@@ -569,7 +570,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
         outputFrame = 0;
         initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
 
-        int maxIndex = (int) g->convertPositionToIndex(currentDiskExtent - 10.0);
+        int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 10.0);
 
         if (processors == 1) {
 

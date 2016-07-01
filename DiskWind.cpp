@@ -570,7 +570,7 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
         outputFrame = 0;
         initWithHCGADensityDistribution(diskMass, radialScale, floorDensity);
 
-        int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 10.0);
+        int maxIndex = (int)g->convertPositionToIndex(currentDiskExtent - 50.0);
 
         if (processors == 1) {
 
@@ -697,7 +697,7 @@ void DiskWind::runSimulation(int years)
             if (frame % frameStride == 0) {
                 std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft << ", " << accumulatedMassLossRight << ", " << totalAccumulatedWindLoss << std::endl;
                 std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << std::endl << std::endl;
-                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t" << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t" << accumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + accumulatedWindLoss << std::endl;
+                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t" << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t" << accumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << std::endl;
             }
 
         }

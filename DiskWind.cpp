@@ -188,7 +188,8 @@ void DiskWind::computeFluxes(int minIndex, int maxIndex)
         double viscousTerm = viscousConstant * (0.5 * yMinusHalf + rMinusHalf * (y - yMinus) / (r - rMinus));
         double magneticTerm = 2 * (leverArmAtCell(i - 0.5, currentWindlossMinusHalf) - 1) * rMinusHalf * rMinusHalf * currentWindlossMinusHalf;
 
-        double currentFlux = viscousTerm; //+ magneticTerm;
+        double currentFlux = viscousTerm + magneticTerm;
+
 
         if (currentFlux * dt / dr >= y - currentWindloss * r * dt) {
             currentFlux = (y - currentWindloss * r * dt) * dr / dt;
@@ -266,11 +267,14 @@ void DiskWind::step()
 
         // boundaries are exchanged
         for (int proc = root_process + 1; proc <= processors-1; proc++) {
-            if (proc == processors) {
+            if (proc == processors - 1) {
                 MPI::COMM_WORLD.Send(&data[proc * chunksize - 1].y, 1, MPI_DOUBLE, proc, initSendLow); // sending lower boundary
+                MPI::COMM_WORLD.Send(&data[proc * chunksize - 1].B2, 1, MPI_DOUBLE, proc, initSendLow); // sending lower boundary
             } else {
                 MPI::COMM_WORLD.Send(&data[proc * chunksize - 1].y, 1, MPI_DOUBLE, proc, initSendLow); // sending lower boundary
                 MPI::COMM_WORLD.Send(&data[(proc + 1) * chunksize].y, 1, MPI_DOUBLE, proc, initSendHigh); // sending upper boundary
+                MPI::COMM_WORLD.Send(&data[proc * chunksize - 1].B2, 1, MPI_DOUBLE, proc, initSendLow); // sending lower boundary
+                MPI::COMM_WORLD.Send(&data[(proc + 1) * chunksize].B2, 1, MPI_DOUBLE, proc, initSendHigh); // sending upper boundary
             }
         }
 
@@ -311,8 +315,10 @@ void DiskWind::step()
 
         for (int proc = root_process + 1; proc <= processors-1; proc++) {
             MPI::COMM_WORLD.Recv(&data[proc * chunksize].y, 1, MPI_DOUBLE, proc, finalRecvLow);
-            if (proc < processors) {
+            MPI::COMM_WORLD.Recv(&data[proc * chunksize].B2, 1, MPI_DOUBLE, proc, finalRecvLow);
+            if (proc < processors - 1) {
                 MPI::COMM_WORLD.Recv(&data[(proc + 1) * chunksize - 1].y, 1, MPI_DOUBLE, proc, finalRecvHigh);
+                MPI::COMM_WORLD.Recv(&data[(proc + 1) * chunksize - 1].B2, 1, MPI_DOUBLE, proc, finalRecvHigh);
             }
         }
 
@@ -341,11 +347,14 @@ void DiskWind::step()
         int minIndex = current_id * chunksize;
         int maxIndex = minIndex + chunksize;
 
-        if (current_id == processors) {
+        if (current_id == processors - 1) {
             MPI::COMM_WORLD.Recv(&data[minIndex - 1].y, 1, MPI_DOUBLE, root_process, initSendLow); // receiving lower boundary
+            MPI::COMM_WORLD.Recv(&data[minIndex - 1].B2, 1, MPI_DOUBLE, root_process, initSendLow); // receiving lower boundary
         } else {
             MPI::COMM_WORLD.Recv(&data[minIndex - 1].y, 1, MPI_DOUBLE, root_process, initSendLow); // receiving lower boundary
             MPI::COMM_WORLD.Recv(&data[maxIndex].y, 1, MPI_DOUBLE, root_process, initSendHigh); // receiving upper boundary
+            MPI::COMM_WORLD.Recv(&data[minIndex - 1].B2, 1, MPI_DOUBLE, root_process, initSendLow); // receiving lower boundary
+            MPI::COMM_WORLD.Recv(&data[maxIndex].B2, 1, MPI_DOUBLE, root_process, initSendHigh); // receiving upper boundary
         }
 
         for (int i = minIndex - 1; i < maxIndex + 1; i++) {
@@ -385,8 +394,11 @@ void DiskWind::step()
 
 
         MPI::COMM_WORLD.Send(&data[minIndex].y, 1, MPI_DOUBLE, root_process, finalRecvLow);
-        if (current_id < processors) {
+        MPI::COMM_WORLD.Send(&data[minIndex].B2, 1, MPI_DOUBLE, root_process, finalRecvLow);
+
+        if (current_id < processors - 1) {
             MPI::COMM_WORLD.Send(&data[maxIndex - 1].y, 1, MPI_DOUBLE, root_process, finalRecvHigh);
+            MPI::COMM_WORLD.Send(&data[maxIndex - 1].B2, 1, MPI_DOUBLE, root_process, finalRecvHigh);
         }
 
         frame++;
@@ -651,9 +663,16 @@ void DiskWind::runSimulation(int years)
         for (int i = 0; dt/year * i < years; i++) {
             step();
 
+            double totalAccumulatedWindLoss = accumulatedWindLoss;
+
             for (int proc = root_process + 1; proc <= processors-1; proc++) {
                 double *buffer = new double[chunksize];
+                double windlossBuffer = 0.0;
+
                 MPI::COMM_WORLD.Recv(buffer, chunksize, MPI_DOUBLE, proc, frameRecv);
+                MPI::COMM_WORLD.Recv(&windlossBuffer, 1, MPI_DOUBLE, proc, totalWindloss);
+
+                totalAccumulatedWindLoss += windlossBuffer;
 
                 for (int j = proc * chunksize; j < (proc + 1) * chunksize; j++) {
                     data[j].y = buffer[j - proc * chunksize];
@@ -665,8 +684,8 @@ void DiskWind::runSimulation(int years)
 
             double currentMass = computeDiskMass();
             if (frame % frameStride == 0) {
-                std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft << ", " << accumulatedMassLossRight << ", " << accumulatedWindLoss << std::endl;
-                std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + accumulatedWindLoss << std::endl << std::endl;
+                std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft << ", " << accumulatedMassLossRight << ", " << totalAccumulatedWindLoss << std::endl;
+                std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << std::endl << std::endl;
             }
 
         }
@@ -677,6 +696,7 @@ void DiskWind::runSimulation(int years)
             if (current_id == processors - 1)
             {
                 MPI::COMM_WORLD.Send(&accumulatedMassLossRight, 1, MPI_DOUBLE, root_process, massLossRight);
+                MPI::COMM_WORLD.Send(&accumulatedWindLoss, 1, MPI_DOUBLE, root_process, totalWindloss);
             }
         }
     }

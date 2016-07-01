@@ -21,7 +21,8 @@ private:
         double B2;
     };
 
-    enum mpiTag {initSendLow, initSendHigh, finalRecvLow, finalRecvHigh, frameRecv, frameBRecv, dispersalSend, massLossRight};
+    enum mpiTag {initSendLow, initSendHigh, finalRecvLow, finalRecvHigh, frameRecv, frameBRecv,
+        dispersalSend, massLossRight, totalWindloss};
 
     double alpha;
     double au = 1.495978707e13;

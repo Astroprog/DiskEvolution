@@ -71,7 +71,7 @@ public:
     double getUpdatedMagneticFluxDensityAtCell(int i);
     void determineDiskExtent();
     double computeDiskMass();
-    void computeFluxes();
+    void computeFluxes(int minIndex, int maxIndex);
 
 
     double densityLossAtRadius(double r, int i);

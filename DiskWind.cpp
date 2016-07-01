@@ -27,8 +27,8 @@ DiskWind::DiskWind()
 
     data = new Point[NGrid];
     tempData = new double[chunksize + 1];
-    windloss = new double[NGrid];
-    flux = new double[NGrid + 1];
+    windloss = new double[chunksize + 1];
+    flux = new double[chunksize + 1];
 }
 
 DiskWind::DiskWind(int ncells)
@@ -46,7 +46,7 @@ DiskWind::DiskWind(int ncells)
 
     data = new Point[NGrid];
     tempData = new double[chunksize + 1];
-    windloss = new double[NGrid];
+    windloss = new double[NGrid + 1];
     flux = new double[NGrid + 1];
 }
 
@@ -150,9 +150,9 @@ double DiskWind::constantLeverArm()
 
 
 
-void DiskWind::computeFluxes()
+void DiskWind::computeFluxes(int minIndex, int maxIndex)
 {
-    for (int i = 0; i < NGrid + 1; i++) {
+    for (int i = minIndex; i < maxIndex; i++) {
         double r = g->convertIndexToPosition(i);
         double rMinusHalf = g->convertIndexToPosition(i - 0.5);
         double rMinus = g->convertIndexToPosition(i - 1.0);
@@ -188,7 +188,7 @@ void DiskWind::computeFluxes()
         double viscousTerm = viscousConstant * (0.5 * yMinusHalf + rMinusHalf * (y - yMinus) / (r - rMinus));
         double magneticTerm = 2 * (leverArmAtCell(i - 0.5, currentWindlossMinusHalf) - 1) * rMinusHalf * rMinusHalf * currentWindlossMinusHalf;
 
-        double currentFlux = viscousTerm + magneticTerm;
+        double currentFlux = viscousTerm; //+ magneticTerm;
 
         if (currentFlux * dt / dr >= y - currentWindloss * r * dt) {
             currentFlux = (y - currentWindloss * r * dt) * dr / dt;
@@ -223,13 +223,11 @@ void DiskWind::step()
 
     if (processors == 1) {
 
-
-
         for (int i = 0; i < NGrid; i++) {
             windloss[i] = densityLossAtRadius(g->convertIndexToPosition(i), i);
         }
 
-        computeFluxes();
+        computeFluxes(0, NGrid + 1);
 
         for (int i = 0; i < chunksize; i++) {
             double rPlusHalf = g->convertIndexToPosition(i + 0.5);
@@ -239,9 +237,6 @@ void DiskWind::step()
             double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
 
             tempData[i] = data[i].y + dt * (flux[i + 1] - flux[i]) / dr;
-
-            // Prevents surface density to become negative when more mass would be lost
-            // by the wind than existent
 
             tempData[i] -= windloss[i] * r * dt;
             accumulatedWindLoss += windloss[i] * currentArea * dt;
@@ -279,31 +274,30 @@ void DiskWind::step()
             }
         }
 
-        for (int i = 0; i < NGrid; i++) {
+        // root process computes his chunk
+
+        for (int i = 0; i < chunksize + 1; i++) {
             windloss[i] = densityLossAtRadius(g->convertIndexToPosition(i), i);
-            double rPlusHalf = g->convertIndexToPosition(i + 0.5);
-            double rMinusHalf = g->convertIndexToPosition(i - 0.5);
-            double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
-            accumulatedWindLoss += windloss[i] * currentArea * dt;
         }
 
-        // root process computes his chunk
+        computeFluxes(0, chunksize + 1);
+
         for (int i = 0; i < chunksize; i++) {
-//            double fluxDiff = computeFluxDiff(i);
             double rPlusHalf = g->convertIndexToPosition(i + 0.5);
             double rMinusHalf = g->convertIndexToPosition(i - 0.5);
             double dr = rPlusHalf - rMinusHalf;
             double r  = g->convertIndexToPosition(i);
             double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
 
-//            tempData[i] = data[i].y + dt * fluxDiff / dr;
+            tempData[i] = data[i].y + dt * (flux[i + 1] - flux[i]) / dr;
 
             tempData[i] -= windloss[i] * r * dt;
+            accumulatedWindLoss += windloss[i] * currentArea * dt;
 
             if (i == 0) {
-//                accumulatedMassLossLeft += Fleft / (dr * data[i].x) * dt * currentArea;
+                accumulatedMassLossLeft += flux[i] / (dr * data[i].x) * dt * currentArea;
             } else if (i == NGrid - 1) {
-//                accumulatedMassLossRight += -Fright / (dr * data[i].x) * dt * currentArea;
+                accumulatedMassLossRight += -flux[i + 1] / (dr * data[i].x) * dt * currentArea;
             }
         }
 
@@ -354,28 +348,29 @@ void DiskWind::step()
             MPI::COMM_WORLD.Recv(&data[maxIndex].y, 1, MPI_DOUBLE, root_process, initSendHigh); // receiving upper boundary
         }
 
-        for (int i = 0; i < NGrid; i++) {
+        for (int i = minIndex - 1; i < maxIndex + 1; i++) {
             windloss[i] = densityLossAtRadius(g->convertIndexToPosition(i), i);
         }
 
 
+        computeFluxes(minIndex, maxIndex + 1);
+
         for (int i = minIndex; i < maxIndex; i++) {
-//            double fluxDiff = computeFluxDiff(i);
             double rPlusHalf = g->convertIndexToPosition(i + 0.5);
             double rMinusHalf = g->convertIndexToPosition(i - 0.5);
             double dr = rPlusHalf - rMinusHalf;
             double r  = g->convertIndexToPosition(i);
             double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
 
-//            tempData[i - minIndex] = data[i].y + dt * fluxDiff / dr;
+            tempData[i - minIndex] = data[i].y + dt * (flux[i + 1] - flux[i]) / dr;
 
             tempData[i - minIndex] -= windloss[i] * r * dt;
             accumulatedWindLoss += windloss[i] * currentArea * dt;
 
             if (i == 0) {
-//                accumulatedMassLossLeft += Fleft / (dr * data[i].x) * dt * currentArea;
+                accumulatedMassLossLeft += flux[i] / (dr * data[i].x) * dt * currentArea;
             } else if (i == NGrid - 1) {
-//                accumulatedMassLossRight += -Fright / (dr * data[i].x) * dt * currentArea;
+                accumulatedMassLossRight += -flux[i + 1] / (dr * data[i].x) * dt * currentArea;
             }
         }
 

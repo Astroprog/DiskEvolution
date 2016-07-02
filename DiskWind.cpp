@@ -129,7 +129,7 @@ double DiskWind::densityLossAtRadius(double r, int i)
 
 double DiskWind::leverArmAtCell(double i, double currentWindloss)
 {
-    if (currentWindloss != 0.0)
+    if (currentWindloss > 0.0)
     {
         double B2Averaged = 0.5 * (data[(int)floor(i)].B2 + data[(int)ceil(i)].B2);
         if (ceil(i) == NGrid) {

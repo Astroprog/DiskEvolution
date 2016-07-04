@@ -729,7 +729,7 @@ void DiskWind::runSimulation(int years)
             if (frame % frameStride == 0) {
                 std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft << ", " << accumulatedMassLossRight << ", " << totalAccumulatedWindLoss << std::endl;
                 std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << std::endl << std::endl;
-                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t" << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t" << accumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << std::endl;
+                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t" << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t" << totalAccumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << std::endl;
             }
 
         }

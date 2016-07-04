@@ -22,8 +22,10 @@ private:
     };
 
     enum mpiTag {initSendLow, initSendHigh, finalRecvLow, finalRecvHigh, frameRecv, frameBRecv,
-        dispersalSend, massLossRight, totalWindloss};
+        frameMDotRecv, dispersalSend, massLossRight, totalWindloss};
 
+    bool constLambda;
+    bool constB;
     double alpha;
     double au = 1.495978707e13;
     double G = 6.67408e-8;
@@ -79,7 +81,8 @@ public:
     double leverArmAtCell(double i, double currentWindloss);
     double constantLeverArm();
 
-    void setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry, double plasmaParameter);
+    void setParameters(double a, double mass, double lum, double rg, double lever, int NFrames,
+                       GridGeometry *geometry, double plasmaParameter, bool constlambda, bool constb);
     void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor);
 
     void runSimulation(int years);

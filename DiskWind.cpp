@@ -72,7 +72,7 @@ void DiskWind::writeFrame()
     {
         std::stringstream ss;
         double pos = g->convertIndexToPosition(i);
-        ss << pos << " " << data[i].y / pos << " " << sqrt(data[i].B2) << " " << leverArmAtCell(i, densityLossAtRadius(g->convertIndexToPosition(i), i));
+        ss << pos << " " << data[i].y / pos << " " << sqrt(data[i].B2) << " " << leverArmAtCell(i, densityLossAtRadius(g->convertIndexToPosition(i), i)) << " " << data[i].mdot;
         stringOutput.push_back(ss.str());
     }
     std::ostringstream tempStream;
@@ -186,7 +186,13 @@ void DiskWind::computeFluxes(int minIndex, int maxIndex)
         double currentWindlossMinusHalf = 0.5 * (currentWindloss + currentWindlossMinus);
 
         double viscousTerm = viscousConstant * (0.5 * yMinusHalf + rMinusHalf * (y - yMinus) / (r - rMinus));
-        double magneticTerm = 2 * (leverArmAtCell(i - 0.5, currentWindlossMinusHalf) - 1) * rMinusHalf * rMinusHalf * currentWindlossMinusHalf;
+
+        double magneticTerm = 0.0;
+        if (constLambda == true) {
+            magneticTerm = 2 * (constantLeverArm() - 1) * rMinusHalf * rMinusHalf * currentWindlossMinusHalf;
+        } else {
+            magneticTerm = 2 * (leverArmAtCell(i - 0.5, currentWindlossMinusHalf) - 1) * rMinusHalf * rMinusHalf * currentWindlossMinusHalf;
+        }
 
         double currentFlux = viscousTerm + magneticTerm;
 
@@ -247,6 +253,8 @@ void DiskWind::step()
             } else if (i == NGrid - 1) {
                 accumulatedMassLossRight += -flux[i + 1] / (dr * data[i].x) * dt * currentArea;
             }
+
+            data[i].mdot = year * flux[i] / (dr * data[i].x) * currentArea;
         }
 
         for (int i = 0; i < chunksize; i++) {
@@ -254,7 +262,10 @@ void DiskWind::step()
             if (data[i].y < 0.0) {
                 data[i].y = 0.0;
             }
-            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+
+            if (!constB) {
+                data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+            }
         }
 
         frame++;
@@ -304,6 +315,7 @@ void DiskWind::step()
             } else if (i == NGrid - 1) {
                 accumulatedMassLossRight += -flux[i + 1] / (dr * data[i].x) * dt * currentArea;
             }
+            data[i].mdot = year * flux[i] / (dr * data[i].x) * currentArea;
         }
 
         for (int i = 0; i < chunksize; i++) {
@@ -311,7 +323,10 @@ void DiskWind::step()
             if (data[i].y < 0.0) {
                 data[i].y = 0.0;
             }
-            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+
+            if (!constB) {
+                data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+            }
         }
 
 
@@ -332,16 +347,21 @@ void DiskWind::step()
 
                 double *buffer = new double[chunksize];
                 double *magneticBuffer = new double[chunksize];
+                double *accretionBuffer = new double[chunksize];
+
                 MPI::COMM_WORLD.Recv(buffer, chunksize, MPI_DOUBLE, proc, frameRecv);
                 MPI::COMM_WORLD.Recv(magneticBuffer, chunksize, MPI_DOUBLE, proc, frameBRecv);
+                MPI::COMM_WORLD.Recv(accretionBuffer, chunksize, MPI_DOUBLE, proc, frameMDotRecv);
 
                 for (int i = proc * chunksize; i < (proc + 1) * chunksize; i++) {
                     data[i].y = buffer[i - proc * chunksize];
                     data[i].B2 = magneticBuffer[i - proc * chunksize];
+                    data[i].mdot = accretionBuffer[i - proc * chunksize];
                 }
 
                 delete[](buffer);
                 delete[](magneticBuffer);
+                delete[](accretionBuffer);
             }
             determineDiskExtent();
             writeFrame();
@@ -387,6 +407,8 @@ void DiskWind::step()
             } else if (i == NGrid - 1) {
                 accumulatedMassLossRight += -flux[i + 1] / (dr * data[i].x) * dt * currentArea;
             }
+
+            data[i].mdot = year * flux[i] / (dr * data[i].x) * currentArea;
         }
 
         for (int i = minIndex; i < maxIndex; i++) {
@@ -394,7 +416,10 @@ void DiskWind::step()
             if (data[i].y < 0.0) {
                 data[i].y = 0.0;
             }
-            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+
+            if (!constB) {
+                data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+            }
         }
 
 
@@ -410,13 +435,17 @@ void DiskWind::step()
         frame++;
         if (frame % frameStride == 0) {
             double *bfield = new double[chunksize];
+            double *accretionRate = new double[chunksize];
             for (int i = minIndex; i < maxIndex; i++) {
                 bfield[i - minIndex] = data[i].B2;
+                accretionRate[i - minIndex] = data[i].mdot;
             }
             MPI::COMM_WORLD.Send(tempData, chunksize, MPI_DOUBLE, root_process, frameRecv);
             MPI::COMM_WORLD.Send(bfield, chunksize, MPI_DOUBLE, root_process, frameBRecv);
+            MPI::COMM_WORLD.Send(accretionRate, chunksize, MPI_DOUBLE, root_process, frameMDotRecv);
 
             delete[](bfield);
+            delete[](accretionRate);
         }
     }
 }
@@ -482,7 +511,8 @@ void DiskWind::initWithRestartData(int lastFrame)
 }
 
 
-void DiskWind::setParameters(double a, double mass, double lum, double rg, double lever, int NFrames, GridGeometry *geometry, double plasmaParameter)
+void DiskWind::setParameters(double a, double mass, double lum, double rg, double lever, int NFrames,
+                             GridGeometry *geometry, double plasmaParameter, bool constlambda, bool constb)
 {
     alpha = a;
     M = mass;
@@ -492,6 +522,8 @@ void DiskWind::setParameters(double a, double mass, double lum, double rg, doubl
     maxFrames = NFrames;
     g = geometry;
     plasma = plasmaParameter;
+    constLambda = constlambda;
+    constB = constb;
 
     viscousConstant = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
 }

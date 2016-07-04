@@ -16,6 +16,8 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
     std::map<std::string, double> pMap = ParameterParser::parseFile(parseString);
 
     bool logscale = (bool)pMap["logscale"]; // Logscale grid acitvated
+    bool constLambda = (bool)pMap["constlambda"];
+    bool constB = (bool)pMap["constb"];
     int NGrid = (int)pMap["ngrid"];         // Number of grid cells
     double rin = pMap["rin"];               // inner simulation boundary in AU
     double rout = pMap["rout"];             // outer simulation boundary in AU
@@ -29,25 +31,33 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
     double luminosity = pMap["luminosity"]; // luminosity of the central star
     double rg = pMap["rg"];                 // gravitational radius - limit for photoevaporation
     double plasma = pMap["plasma"];            // plasma parameter as ration of gas pressure vs magnetic pressure
+    double lambda = pMap["lambda"];
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass, luminosity, rg, 1.0, frames, g, plasma);
+    disk->setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB);
     disk->initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
 
     std::vector<double> *parameters = new std::vector<double>;
-    for (double i = 1e7; i > 100; i = i / 1.1) {
-        parameters->push_back(i);
+
+
+    if (constLambda) {
+        for (double i = 1.0; i < 20.0; i = i + 0.1)
+        {
+            parameters->push_back(i);
+        }
+
+        const std::string parameterType = "lambda";
+        disk->runDispersalAnalysis(50000000, parameters, parameterType);
+    } else {
+        for (double i = 1e7; i > 100; i = i / 1.1) {
+            parameters->push_back(i);
+        }
+
+        const std::string parameterType = "plasma";
+        disk->runDispersalAnalysis(50000000, parameters, parameterType);
     }
 
-//    for (double i = 1.0; i < 20.0; i = i + 0.1)
-//    {
-//          parameters->push_back(i);
-//    }
-
-    const std::string parameterType = "plasma";
-
-    disk->runDispersalAnalysis(50000000, parameters, parameterType);
 }
 
 void Simulation::runOrdinarySimulation(char *parseString)
@@ -56,6 +66,8 @@ void Simulation::runOrdinarySimulation(char *parseString)
 
     bool restart = (bool)pMap["restart"];
     bool logscale = (bool)pMap["logscale"];
+    bool constLambda = (bool)pMap["constlambda"];
+    bool constB = (bool)pMap["constb"];
     int NGrid = (int)pMap["ngrid"];
     double rin = pMap["rin"];
     double rout = pMap["rout"];
@@ -67,12 +79,13 @@ void Simulation::runOrdinarySimulation(char *parseString)
     double luminosity = pMap["luminosity"];
     double rg = pMap["rg"];
     double plasma = pMap["plasma"];
+    double lambda = pMap["lambda"];
     int frames = (int)pMap["frames"];
     int time = (int)pMap["time"];
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass, luminosity, rg, 1.4, frames, g, plasma);
+    disk->setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB);
 
     if (restart) {
         int restartFrame = (int)pMap["restartframe"];

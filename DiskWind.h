@@ -26,6 +26,7 @@ private:
 
     bool constLambda;
     bool constB;
+    bool fluxFreezing;
     double alpha;
     double au = 1.495978707e13;
     double G = 6.67408e-8;
@@ -58,6 +59,7 @@ private:
     double accumulatedWindLoss;
     GridGeometry *g;
     Point *data;
+    double *initialDensity;
     double *tempData;
     double *windloss;
     double *flux;
@@ -82,7 +84,7 @@ public:
     double constantLeverArm();
 
     void setParameters(double a, double mass, double lum, double rg, double lever, int NFrames,
-                       GridGeometry *geometry, double plasmaParameter, bool constlambda, bool constb);
+                       GridGeometry *geometry, double plasmaParameter, bool constlambda, bool constb, bool freezing);
     void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor);
 
     void runSimulation(int years);

@@ -18,6 +18,7 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
     bool logscale = (bool)pMap["logscale"]; // Logscale grid acitvated
     bool constLambda = (bool)pMap["constlambda"];
     bool constB = (bool)pMap["constb"];
+    bool freezing = (bool)pMap["freezing"];
     int NGrid = (int)pMap["ngrid"];         // Number of grid cells
     double rin = pMap["rin"];               // inner simulation boundary in AU
     double rout = pMap["rout"];             // outer simulation boundary in AU
@@ -35,7 +36,7 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB);
+    disk->setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB, freezing);
     disk->initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
 
     std::vector<double> *parameters = new std::vector<double>;
@@ -68,6 +69,7 @@ void Simulation::runOrdinarySimulation(char *parseString)
     bool logscale = (bool)pMap["logscale"];
     bool constLambda = (bool)pMap["constlambda"];
     bool constB = (bool)pMap["constb"];
+    bool freezing = (bool)pMap["freezing"];
     int NGrid = (int)pMap["ngrid"];
     double rin = pMap["rin"];
     double rout = pMap["rout"];
@@ -85,7 +87,7 @@ void Simulation::runOrdinarySimulation(char *parseString)
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB);
+    disk->setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB, freezing);
 
     if (restart) {
         int restartFrame = (int)pMap["restartframe"];

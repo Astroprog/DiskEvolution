@@ -26,6 +26,7 @@ DiskWind::DiskWind()
     const int chunksize = NGrid / processors;
 
     data = new Point[NGrid];
+    initialDensity = new double[NGrid];
     tempData = new double[chunksize + 1];
     windloss = new double[chunksize + 1];
     flux = new double[chunksize + 1];
@@ -45,6 +46,7 @@ DiskWind::DiskWind(int ncells)
     const int chunksize = NGrid / processors;
 
     data = new Point[NGrid];
+    initialDensity = new double[NGrid];
     tempData = new double[chunksize + 1];
     windloss = new double[NGrid + 1];
     flux = new double[NGrid + 1];
@@ -53,6 +55,7 @@ DiskWind::DiskWind(int ncells)
 DiskWind::~DiskWind()
 {
     delete[](data);
+    delete[](initialDensity);
     delete[](tempData);
     delete[](windloss);
     delete[](flux);
@@ -454,8 +457,13 @@ double DiskWind::getUpdatedMagneticFluxDensityAtCell(int i)
 {
     double soundSpeed = sqrt(kb * T0 / (2.3 * mp * sqrt(data[i].x)));
     double scaleHeight = soundSpeed / sqrt(G*M/pow(data[i].x * au, 3));
-    double midplaneDensity = data[i].y / data[i].x / (sqrt(2 * M_PI) * scaleHeight);
-    return 8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
+    double currentDensity = data[i].y / data[i].x;
+    double midplaneDensity = currentDensity / (sqrt(2 * M_PI) * scaleHeight);
+    if (fluxFreezing) {
+        return 8 * M_PI * midplaneDensity * currentDensity / initialDensity[i] * soundSpeed * soundSpeed / plasma;
+    } else {
+        return 8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
+    }
 }
 
 void DiskWind::determineDiskExtent()
@@ -512,7 +520,8 @@ void DiskWind::initWithRestartData(int lastFrame)
 
 
 void DiskWind::setParameters(double a, double mass, double lum, double rg, double lever, int NFrames,
-                             GridGeometry *geometry, double plasmaParameter, bool constlambda, bool constb)
+                             GridGeometry *geometry, double plasmaParameter, bool constlambda,
+                             bool constb, bool freezing)
 {
     alpha = a;
     M = mass;
@@ -524,6 +533,7 @@ void DiskWind::setParameters(double a, double mass, double lum, double rg, doubl
     plasma = plasmaParameter;
     constLambda = constlambda;
     constB = constb;
+    fluxFreezing = freezing;
 
     viscousConstant = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
 }
@@ -553,6 +563,10 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
         double midplaneDensity = data[i].y / data[i].x / (sqrt(2 * M_PI) * scaleHeight);
         double B2 = 8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
         data[i].B2 = B2;
+
+        if (fluxFreezing) {
+            initialDensity[i] = data[i].y / data[i].x;
+        }
     }
 
     determineDiskExtent();

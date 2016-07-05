@@ -312,13 +312,13 @@ void DiskWind::step()
 
             tempData[i] -= windloss[i] * r * dt;
             accumulatedWindLoss += windloss[i] * currentArea * dt;
+            data[i].mdot = year * flux[i] / (dr * data[i].x) * currentArea;
 
             if (i == 0) {
                 accumulatedMassLossLeft += flux[i] / (dr * data[i].x) * dt * currentArea;
             } else if (i == NGrid - 1) {
                 accumulatedMassLossRight += -flux[i + 1] / (dr * data[i].x) * dt * currentArea;
             }
-            data[i].mdot = year * flux[i] / (dr * data[i].x) * currentArea;
         }
 
         for (int i = 0; i < chunksize; i++) {
@@ -743,7 +743,7 @@ void DiskWind::runSimulation(int years)
             if (frame % frameStride == 0) {
                 std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft << ", " << accumulatedMassLossRight << ", " << totalAccumulatedWindLoss << std::endl;
                 std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << std::endl << std::endl;
-                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t" << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t" << totalAccumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << std::endl;
+                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t" << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t" << totalAccumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << "\t" << data[0].mdot << std::endl;
             }
 
         }

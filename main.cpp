@@ -4,7 +4,7 @@
 #include <iostream>
 #include <mpi.h>
 #include "ParameterParser.h"
-
+#include "GridGeometry.h"
 
 int main(int argc, char** argv)
 {
@@ -23,7 +23,6 @@ int main(int argc, char** argv)
     }
 
     MPI::Finalize();
-
 
     return 0;
 }

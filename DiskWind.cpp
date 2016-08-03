@@ -703,6 +703,9 @@ void DiskWind::runSimulation(int years)
     std::ofstream massFile;
     massFile.open("massloss.dat");
 
+    std::ofstream checkFile;
+    checkFile.open("check.dat");
+
 
     if (processors == 1) {
 
@@ -710,9 +713,16 @@ void DiskWind::runSimulation(int years)
             step();
             double currentMass = computeDiskMass();
             if (frame % frameStride == 0) {
-                std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft << ", " << accumulatedMassLossRight << ", " << accumulatedWindLoss << std::endl;
-                std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + accumulatedWindLoss << std::endl << std::endl;
-                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t" << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t" << accumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + accumulatedWindLoss << std::endl;
+                std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft
+                          << ", " << accumulatedMassLossRight << ", " << accumulatedWindLoss << std::endl;
+                std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight
+                                                                   + accumulatedWindLoss << std::endl << std::endl;
+                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t"
+                         << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t"
+                         << accumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft +
+                        accumulatedMassLossRight + accumulatedWindLoss << std::endl;
+                checkFile << dt/year * i << "\t" << data[40].y / data[40].x << "\t" << data[40].x << std::endl;
+
             }
         }
     } else if (current_id == root_process) {
@@ -741,9 +751,17 @@ void DiskWind::runSimulation(int years)
 
             double currentMass = computeDiskMass();
             if (frame % frameStride == 0) {
-                std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft << ", " << accumulatedMassLossRight << ", " << totalAccumulatedWindLoss << std::endl;
-                std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << std::endl << std::endl;
-                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t" << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t" << totalAccumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss << "\t" << data[0].mdot << std::endl;
+                std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft
+                          << ", " << accumulatedMassLossRight << ", " << totalAccumulatedWindLoss << std::endl;
+                std::cout << std::setprecision(16) << "Total: "
+                          << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss
+                          << std::endl << std::endl;
+                massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass
+                         << "\t" << accumulatedMassLossLeft << "\t"
+                         << accumulatedMassLossRight << "\t" << totalAccumulatedWindLoss << "\t"
+                         << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss
+                         << "\t" << data[0].mdot << std::endl;
+                checkFile << dt/year * i << "\t" << data[40].y / data[40].x << "\t" << data[40].x << std::endl;
             }
 
         }
@@ -761,4 +779,5 @@ void DiskWind::runSimulation(int years)
     }
 
     massFile.close();
+    checkFile.close();
 }

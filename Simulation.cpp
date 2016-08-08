@@ -19,6 +19,7 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
     bool constLambda = (bool)pMap["constlambda"];
     bool constB = (bool)pMap["constb"];
     bool freezing = (bool)pMap["freezing"];
+    bool pfreezing = (bool)pMap["pfreezing"];
     int NGrid = (int)pMap["ngrid"];         // Number of grid cells
     double rin = pMap["rin"];               // inner simulation boundary in AU
     double rout = pMap["rout"];             // outer simulation boundary in AU
@@ -36,7 +37,7 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB, freezing);
+    disk->setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB, freezing, pfreezing);
     disk->initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
 
     std::vector<double> *parameters = new std::vector<double>;
@@ -53,6 +54,7 @@ void Simulation::runDiskDispersalAnalysis(char* parseString)
     } else {
         for (double i = 1e7; i > 100; i = i / 1.1) {
             parameters->push_back(i);
+            std::cout << i << std::endl;
         }
 
         const std::string parameterType = "plasma";
@@ -70,6 +72,7 @@ void Simulation::runOrdinarySimulation(char *parseString)
     bool constLambda = (bool)pMap["constlambda"];
     bool constB = (bool)pMap["constb"];
     bool freezing = (bool)pMap["freezing"];
+    bool pfreezing = (bool)pMap["pfreezing"];
     int NGrid = (int)pMap["ngrid"];
     double rin = pMap["rin"];
     double rout = pMap["rout"];
@@ -87,7 +90,7 @@ void Simulation::runOrdinarySimulation(char *parseString)
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
     DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB, freezing);
+    disk->setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB, freezing, pfreezing);
 
     if (restart) {
         int restartFrame = (int)pMap["restartframe"];

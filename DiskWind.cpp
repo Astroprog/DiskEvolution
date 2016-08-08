@@ -261,13 +261,57 @@ void DiskWind::step()
         }
 
         for (int i = 0; i < chunksize; i++) {
+            if (!constB) {
+                if (perfectFluxFreezing) {
+                    double rPlusHalf = g->convertIndexToPosition(i + 0.5);
+                    double rMinusHalf = g->convertIndexToPosition(i - 0.5);
+                    double dr = rPlusHalf - rMinusHalf;
+                    double drMinus = rMinusHalf - g->convertIndexToPosition(i - 1.5);
+                    double drPlus = g->convertIndexToPosition(i + 1.5) - rPlusHalf;
+                    double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
+                    double areaMinus = M_PI * au * au * (pow(rMinusHalf, 2) - pow(g->convertIndexToPosition(i - 1.5), 2));
+                    double areaPlus = M_PI * au * au * (pow(g->convertIndexToPosition(i + 1.5), 2) - pow(rPlusHalf, 2));
+
+                    if (flux[i] > 0.0) {
+                        if (data[i].y > 0.0) {
+                            data[i].B2 -= pow(dt * flux[i] / dr / data[i].y * sqrt(data[i].B2), 2);
+                        }
+                    }
+
+                    if (flux[i + 1] < 0.0) {
+                        if (data[i].y > 0.0) {
+                            data[i].B2 -= pow(dt * flux[i + 1] / dr / data[i].y * sqrt(data[i].B2), 2);
+                        }
+                    }
+
+                    if (flux[i] < 0.0) {
+                        if (data[i - 1].y > 0.0) {
+                            data[i].B2 += pow(dt * flux[i] / drMinus / data[i - 1].y * sqrt(data[i - 1].B2) * currentArea / areaMinus, 2);
+                        }
+                    }
+
+                    if (flux[i + 1] > 0.0) {
+                        if (data[i + 1].y > 0.0) {
+                            data[i].B2 += pow(dt * flux[i + 1] / drPlus / data[i + 1].y * sqrt(data[i + 1].B2) * areaPlus / currentArea, 2);
+                        }
+                    }
+
+                    if (data[i].B2 < 0.0) {
+                        data[i].B2 = 0.0;
+                    }
+
+                    if (data[i].y == 0) {
+                        data[i].B2 = 0.0;
+                    }
+
+                } else {
+                    data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+                }
+            }
+
             data[i].y = tempData[i];
             if (data[i].y < 0.0) {
                 data[i].y = 0.0;
-            }
-
-            if (!constB) {
-                data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
             }
         }
 
@@ -322,13 +366,53 @@ void DiskWind::step()
         }
 
         for (int i = 0; i < chunksize; i++) {
+            if (!constB) {
+                if (perfectFluxFreezing) {
+                    double rPlusHalf = g->convertIndexToPosition(i + 0.5);
+                    double rMinusHalf = g->convertIndexToPosition(i - 0.5);
+                    double dr = rPlusHalf - rMinusHalf;
+                    double drMinus = rMinusHalf - g->convertIndexToPosition(i - 1.5);
+                    double drPlus = g->convertIndexToPosition(i + 1.5) - rPlusHalf;
+                    double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
+                    double areaMinus = M_PI * au * au * (pow(rMinusHalf, 2) - pow(g->convertIndexToPosition(i - 1.5), 2));
+                    double areaPlus = M_PI * au * au * (pow(g->convertIndexToPosition(i + 1.5), 2) - pow(rPlusHalf, 2));
+
+                    if (flux[i] > 0.0) {
+                        if (data[i].y > 0.0) {
+                            data[i].B2 -= pow(dt * flux[i] / dr / data[i].y * sqrt(data[i].B2), 2);
+                        }
+                    }
+
+                    if (flux[i + 1] < 0.0) {
+                        if (data[i].y > 0.0) {
+                            data[i].B2 -= pow(dt * flux[i + 1] / dr / data[i].y * sqrt(data[i].B2), 2);
+                        }
+                    }
+
+                    if (flux[i] < 0.0) {
+                        if (data[i - 1].y > 0.0) {
+                            data[i].B2 += pow(dt * flux[i] / drMinus / data[i - 1].y * sqrt(data[i - 1].B2) * currentArea / areaMinus, 2);
+                        }
+                    }
+
+                    if (flux[i + 1] > 0.0) {
+                        if (data[i + 1].y > 0.0) {
+                            data[i].B2 += pow(dt * flux[i + 1] / drPlus / data[i + 1].y * sqrt(data[i + 1].B2) * areaPlus / currentArea, 2);
+                        }
+                    }
+
+                    if (data[i].B2 < 0.0) {
+                        data[i].B2 = 0.0;
+                    }
+
+                } else {
+                    data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+                }
+            }
+
             data[i].y = tempData[i];
             if (data[i].y < 0.0) {
                 data[i].y = 0.0;
-            }
-
-            if (!constB) {
-                data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
             }
         }
 
@@ -415,13 +499,54 @@ void DiskWind::step()
         }
 
         for (int i = minIndex; i < maxIndex; i++) {
+
+            if (!constB) {
+                if (perfectFluxFreezing) {
+                    double rPlusHalf = g->convertIndexToPosition(i + 0.5);
+                    double rMinusHalf = g->convertIndexToPosition(i - 0.5);
+                    double dr = rPlusHalf - rMinusHalf;
+                    double drMinus = rMinusHalf - g->convertIndexToPosition(i - 1.5);
+                    double drPlus = g->convertIndexToPosition(i + 1.5) - rPlusHalf;
+                    double currentArea = M_PI * au * au * (pow(rPlusHalf, 2) - pow(rMinusHalf, 2));
+                    double areaMinus = M_PI * au * au * (pow(rMinusHalf, 2) - pow(g->convertIndexToPosition(i - 1.5), 2));
+                    double areaPlus = M_PI * au * au * (pow(g->convertIndexToPosition(i + 1.5), 2) - pow(rPlusHalf, 2));
+
+                    if (flux[i] > 0.0) {
+                        if (data[i].y > 0.0) {
+                            data[i].B2 -= pow(dt * flux[i] / dr / data[i].y * sqrt(data[i].B2), 2);
+                        }
+                    }
+
+                    if (flux[i + 1] < 0.0) {
+                        if (data[i].y > 0.0) {
+                            data[i].B2 -= pow(dt * flux[i + 1] / dr / data[i].y * sqrt(data[i].B2), 2);
+                        }
+                    }
+
+                    if (flux[i] < 0.0) {
+                        if (data[i - 1].y > 0.0) {
+                            data[i].B2 += pow(dt * flux[i] / drMinus / data[i - 1].y * sqrt(data[i - 1].B2) * currentArea / areaMinus, 2);
+                        }
+                    }
+
+                    if (flux[i + 1] > 0.0) {
+                        if (data[i + 1].y > 0.0) {
+                            data[i].B2 += pow(dt * flux[i + 1] / drPlus / data[i + 1].y * sqrt(data[i + 1].B2) * areaPlus / currentArea, 2);
+                        }
+                    }
+
+                    if (data[i].B2 < 0.0) {
+                        data[i].B2 = 0.0;
+                    }
+
+                } else {
+                    data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+                }
+            }
+
             data[i].y = tempData[i - minIndex];
             if (data[i].y < 0.0) {
                 data[i].y = 0.0;
-            }
-
-            if (!constB) {
-                data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
             }
         }
 
@@ -521,7 +646,7 @@ void DiskWind::initWithRestartData(int lastFrame)
 
 void DiskWind::setParameters(double a, double mass, double lum, double rg, double lever, int NFrames,
                              GridGeometry *geometry, double plasmaParameter, bool constlambda,
-                             bool constb, bool freezing)
+                             bool constb, bool freezing, bool pfreezing)
 {
     alpha = a;
     M = mass;
@@ -534,6 +659,7 @@ void DiskWind::setParameters(double a, double mass, double lum, double rg, doubl
     constLambda = constlambda;
     constB = constb;
     fluxFreezing = freezing;
+    perfectFluxFreezing = pfreezing;
 
     viscousConstant = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
 }
@@ -563,6 +689,16 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
         double midplaneDensity = data[i].y / data[i].x / (sqrt(2 * M_PI) * scaleHeight);
         double B2 = 8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
         data[i].B2 = B2;
+
+        if (perfectFluxFreezing)
+        {
+            // At 10 AU the value of reference is set
+            if (i == 75) {
+                freezingPlasma = midplaneDensity / sqrt(B2);
+//                std::cout << sqrt(B2) << std::endl;
+//                std::cout << "freezing Plasma: " << midplaneDensity / freezingPlasma << std::endl;
+            }
+        }
 
         if (fluxFreezing) {
             initialDensity[i] = data[i].y / data[i].x;

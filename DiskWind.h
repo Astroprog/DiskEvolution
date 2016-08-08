@@ -27,6 +27,7 @@ private:
     bool constLambda;
     bool constB;
     bool fluxFreezing;
+    bool perfectFluxFreezing;
     double alpha;
     double au = 1.495978707e13;
     double G = 6.67408e-8;
@@ -43,6 +44,7 @@ private:
     double photoRadius;
     double viscousConstant;
     double plasma;
+    double freezingPlasma;
     double currentDiskExtent;
     int NGrid;
     int frame;
@@ -84,7 +86,7 @@ public:
     double constantLeverArm();
 
     void setParameters(double a, double mass, double lum, double rg, double lever, int NFrames,
-                       GridGeometry *geometry, double plasmaParameter, bool constlambda, bool constb, bool freezing);
+                       GridGeometry *geometry, double plasmaParameter, bool constlambda, bool constb, bool freezing, bool pfreezing);
     void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor);
 
     void runSimulation(int years);

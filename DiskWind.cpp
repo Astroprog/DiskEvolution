@@ -272,27 +272,43 @@ void DiskWind::step()
                     double areaMinus = M_PI * au * au * (pow(rMinusHalf, 2) - pow(g->convertIndexToPosition(i - 1.5), 2));
                     double areaPlus = M_PI * au * au * (pow(g->convertIndexToPosition(i + 1.5), 2) - pow(rPlusHalf, 2));
 
+                    if (sqrt(data[i].B2) > 10.0) {
+                        std::cout << frame << ": " << i << ": Flux[i]: " << flux[i] << ", Flux[i + 1]: " << flux[i + 1] << std::endl;
+                    }
+
                     if (flux[i] > 0.0) {
-                        if (data[i].y > 0.0) {
-                            data[i].B2 -= pow(dt * flux[i] / dr / data[i].y * sqrt(data[i].B2), 2);
+                        double tempY = dt * flux[i] / dr;
+                        if (data[i].y > 0.0 && tempY <= data[i].y) {
+                            double b = sqrt(data[i].B2);
+                            b -= tempY / data[i].y * b;
+                            data[i].B2 = b*b;
                         }
                     }
 
                     if (flux[i + 1] < 0.0) {
-                        if (data[i].y > 0.0) {
-                            data[i].B2 -= pow(dt * flux[i + 1] / dr / data[i].y * sqrt(data[i].B2), 2);
+                        double tempY = dt * flux[i + 1] / dr;
+                        if (data[i].y > 0.0 && tempY <= data[i].y) {
+                            double b = sqrt(data[i].B2);
+                            b -= tempY / data[i].y * b;
+                            data[i].B2 = b*b;
                         }
                     }
 
                     if (flux[i] < 0.0) {
-                        if (data[i - 1].y > 0.0) {
-                            data[i].B2 += pow(dt * flux[i] / drMinus / data[i - 1].y * sqrt(data[i - 1].B2) * currentArea / areaMinus, 2);
+                        double tempY = dt * flux[i] / drMinus;
+                        if (data[i - 1].y > 0.0 && data[i].y > 0.0 && tempY <= data[i - 1].y) {
+                            double b = sqrt(data[i].B2);
+                            b += tempY / data[i - 1].y * sqrt(data[i - 1].B2) * currentArea / areaMinus;
+                            data[i].B2 = b*b;
                         }
                     }
 
                     if (flux[i + 1] > 0.0) {
-                        if (data[i + 1].y > 0.0) {
-                            data[i].B2 += pow(dt * flux[i + 1] / drPlus / data[i + 1].y * sqrt(data[i + 1].B2) * areaPlus / currentArea, 2);
+                        double tempY = dt * flux[i + 1] / drPlus;
+                        if (data[i + 1].y > 0.0 && data[i].y > 0.0 && tempY <= data[i + 1].y) {
+                            double b = sqrt(data[i].B2);
+                            b += tempY / data[i + 1].y * sqrt(data[i + 1].B2) * areaPlus / currentArea;
+                            data[i].B2 = b*b;
                         }
                     }
 
@@ -379,25 +395,33 @@ void DiskWind::step()
 
                     if (flux[i] > 0.0) {
                         if (data[i].y > 0.0) {
-                            data[i].B2 -= pow(dt * flux[i] / dr / data[i].y * sqrt(data[i].B2), 2);
+                            double b = sqrt(data[i].B2);
+                            b -= dt * flux[i] / dr / data[i].y * b;
+                            data[i].B2 = b*b;
                         }
                     }
 
                     if (flux[i + 1] < 0.0) {
                         if (data[i].y > 0.0) {
-                            data[i].B2 -= pow(dt * flux[i + 1] / dr / data[i].y * sqrt(data[i].B2), 2);
+                            double b = sqrt(data[i].B2);
+                            b -= dt * flux[i + 1] / dr / data[i].y * b;
+                            data[i].B2 = b*b;
                         }
                     }
 
                     if (flux[i] < 0.0) {
                         if (data[i - 1].y > 0.0) {
-                            data[i].B2 += pow(dt * flux[i] / drMinus / data[i - 1].y * sqrt(data[i - 1].B2) * currentArea / areaMinus, 2);
+                            double b = sqrt(data[i].B2);
+                            b += dt * flux[i] / drMinus / data[i - 1].y * sqrt(data[i - 1].B2) * currentArea / areaMinus;
+                            data[i].B2 = b*b;
                         }
                     }
 
                     if (flux[i + 1] > 0.0) {
                         if (data[i + 1].y > 0.0) {
-                            data[i].B2 += pow(dt * flux[i + 1] / drPlus / data[i + 1].y * sqrt(data[i + 1].B2) * areaPlus / currentArea, 2);
+                            double b = sqrt(data[i].B2);
+                            b += dt * flux[i + 1] / drPlus / data[i + 1].y * sqrt(data[i + 1].B2) * areaPlus / currentArea;
+                            data[i].B2 = b*b;
                         }
                     }
 
@@ -513,25 +537,33 @@ void DiskWind::step()
 
                     if (flux[i] > 0.0) {
                         if (data[i].y > 0.0) {
-                            data[i].B2 -= pow(dt * flux[i] / dr / data[i].y * sqrt(data[i].B2), 2);
+                            double b = sqrt(data[i].B2);
+                            b -= dt * flux[i] / dr / data[i].y * b;
+                            data[i].B2 = b*b;
                         }
                     }
 
                     if (flux[i + 1] < 0.0) {
                         if (data[i].y > 0.0) {
-                            data[i].B2 -= pow(dt * flux[i + 1] / dr / data[i].y * sqrt(data[i].B2), 2);
+                            double b = sqrt(data[i].B2);
+                            b -= dt * flux[i + 1] / dr / data[i].y * b;
+                            data[i].B2 = b*b;
                         }
                     }
 
                     if (flux[i] < 0.0) {
                         if (data[i - 1].y > 0.0) {
-                            data[i].B2 += pow(dt * flux[i] / drMinus / data[i - 1].y * sqrt(data[i - 1].B2) * currentArea / areaMinus, 2);
+                            double b = sqrt(data[i].B2);
+                            b += dt * flux[i] / drMinus / data[i - 1].y * sqrt(data[i - 1].B2) * currentArea / areaMinus;
+                            data[i].B2 = b*b;
                         }
                     }
 
                     if (flux[i + 1] > 0.0) {
                         if (data[i + 1].y > 0.0) {
-                            data[i].B2 += pow(dt * flux[i + 1] / drPlus / data[i + 1].y * sqrt(data[i + 1].B2) * areaPlus / currentArea, 2);
+                            double b = sqrt(data[i].B2);
+                            b += dt * flux[i + 1] / drPlus / data[i + 1].y * sqrt(data[i + 1].B2) * areaPlus / currentArea;
+                            data[i].B2 = b*b;
                         }
                     }
 

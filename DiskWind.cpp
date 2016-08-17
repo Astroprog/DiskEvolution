@@ -62,6 +62,8 @@ DiskWind::~DiskWind()
     delete(g);
 }
 
+
+// Writes the current state to a file
 void DiskWind::writeFrame()
 {
     std::cout << "Writing frame " << outputFrame << " (step " << frame << ", " << dt/year * frame << "yr)" << std::endl;
@@ -86,6 +88,8 @@ void DiskWind::writeFrame()
     outputFrame++;
 }
 
+
+// Computes the smallest interval of space for the calculation of the time step
 void DiskWind::computedx()
 {
     dx = g->convertIndexToPosition(1) - g->convertIndexToPosition(0);  //Determining the smallest dx in data
@@ -99,6 +103,8 @@ void DiskWind::computedx()
     }
 }
 
+
+// Computes a stable time step
 void DiskWind::computedt()
 {
     double x = g->convertIndexToPosition(1) - g->convertIndexToPosition(0);
@@ -115,6 +121,9 @@ void DiskWind::computedt()
     std::cout << "Timestep: " << dt << std::endl;
 }
 
+
+// Returns the density loss, computed by the photoevaporation model.
+// First corrections, preventing the wind to carry more mass away than available.
 double DiskWind::densityLossAtRadius(double r, int i)
 {
     if (r * au >= photoRadius) {
@@ -130,6 +139,8 @@ double DiskWind::densityLossAtRadius(double r, int i)
     }
 }
 
+
+// Returns the magnetic lever arm, computed with the underlying magnetic field.
 double DiskWind::leverArmAtCell(double i, double currentWindloss)
 {
     if (currentWindloss > 0.0)
@@ -146,13 +157,15 @@ double DiskWind::leverArmAtCell(double i, double currentWindloss)
     }
 }
 
+// Used for the simulation runs with a spacially constant magnetic lever arm.
 double DiskWind::constantLeverArm()
 {
     return leverArm;
 }
 
 
-
+// Computes the new fluxes for the current step, following the differential equations of the chosen model.
+// Necessary corrections for low surface densities are made here.
 void DiskWind::computeFluxes(int minIndex, int maxIndex)
 {
     for (int i = minIndex; i < maxIndex; i++) {
@@ -199,7 +212,7 @@ void DiskWind::computeFluxes(int minIndex, int maxIndex)
 
         double currentFlux = viscousTerm + magneticTerm;
 
-
+        // Low surface density corrections
         if (currentFlux * dt / dr >= y - currentWindloss * r * dt) {
             currentFlux = (y - currentWindloss * r * dt) * dr / dt;
         } else if (-currentFlux * dt / drMinus >= yMinus - currentWindlossMinus * rMinus * dt) {
@@ -220,6 +233,8 @@ void DiskWind::computeFluxes(int minIndex, int maxIndex)
     }
 }
 
+
+// Advances the system by one time step
 void DiskWind::step()
 {
     // Determine MPI Data
@@ -233,11 +248,17 @@ void DiskWind::step()
 
     if (processors == 1) {
 
+        // Compute wind losses
+
         for (int i = 0; i < NGrid; i++) {
             windloss[i] = densityLossAtRadius(g->convertIndexToPosition(i), i);
         }
 
+        // Compute fluxes
+
         computeFluxes(0, NGrid + 1);
+
+        // Iterate over the array and generate the updated values.
 
         for (int i = 0; i < chunksize; i++) {
             double rPlusHalf = g->convertIndexToPosition(i + 0.5);
@@ -249,6 +270,8 @@ void DiskWind::step()
             tempData[i] = data[i].y + dt * (flux[i + 1] - flux[i]) / dr;
 
             tempData[i] -= windloss[i] * r * dt;
+
+            // Used for accuracy checks
             accumulatedWindLoss += windloss[i] * currentArea * dt;
 
             if (i == 0) {
@@ -257,8 +280,11 @@ void DiskWind::step()
                 accumulatedMassLossRight += -flux[i + 1] / (dr * data[i].x) * dt * currentArea;
             }
 
+            // Accretion rate
             data[i].mdot = year * flux[i] / (dr * data[i].x) * currentArea;
         }
+
+        // Updates with the new values
 
         for (int i = 0; i < chunksize; i++) {
             if (!constB) {
@@ -372,7 +398,7 @@ void DiskWind::step()
 
 
 
-    } else {
+    } else {  // additional processors
         int minIndex = current_id * chunksize;
         int maxIndex = minIndex + chunksize;
 
@@ -454,6 +480,8 @@ void DiskWind::step()
     }
 }
 
+// Returns the updated magnetic flux density for a given cell i.
+
 double DiskWind::getUpdatedMagneticFluxDensityAtCell(int i)
 {
     double soundSpeed = sqrt(kb * T0 / (2.3 * mp * sqrt(data[i].x)));
@@ -470,6 +498,7 @@ double DiskWind::getUpdatedMagneticFluxDensityAtCell(int i)
     }
 }
 
+// Computes the extent of the disk. Used for density bump detection
 void DiskWind::determineDiskExtent()
 {
     for (int i = NGrid - 1; i >= 0; i--) {
@@ -480,6 +509,8 @@ void DiskWind::determineDiskExtent()
     }
 }
 
+
+// Computes the disk mass
 double DiskWind::computeDiskMass()
 {
     double mass = 0.0;
@@ -490,6 +521,7 @@ double DiskWind::computeDiskMass()
 }
 
 
+// Currently not working
 void DiskWind::initWithRestartData(int lastFrame)
 {
     std::cout << "Initializing with frame " << lastFrame << std::endl;
@@ -523,6 +555,7 @@ void DiskWind::initWithRestartData(int lastFrame)
 }
 
 
+// Initializes the system with the chosen parameters from the Simulation class
 void DiskWind::setParameters(double a, double mass, double lum, double rg, double lever, int NFrames,
                              GridGeometry *geometry, double plasmaParameter, bool constlambda,
                              bool constb, bool freezing, bool pfreezing)
@@ -544,6 +577,7 @@ void DiskWind::setParameters(double a, double mass, double lum, double rg, doubl
 }
 
 
+// Initializes the density distribution
 void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor)
 {
     std::cout << "Initializing grid of size " << NGrid << " with HCGA distribution" << std::endl;
@@ -597,6 +631,7 @@ void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double ra
 }
 
 
+// Currently not working
 void DiskWind::restartSimulation(int lastFrame, int years)
 {
     double NSteps = (double)years * year / dt;
@@ -610,6 +645,8 @@ void DiskWind::restartSimulation(int lastFrame, int years)
     }
 }
 
+
+// Triggers a dispersal analysis with a list of parameter values, given by the Simulation class
 void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* parameters, const std::string parameterType)
 {
     double NSteps = (double)timeLimit * year / dt;
@@ -713,6 +750,8 @@ void DiskWind::runDispersalAnalysis(int timeLimit, std::vector<double>* paramete
 
 }
 
+
+// Runs the simulation after it has been initialized
 void DiskWind::runSimulation(int years)
 {
     double NSteps = (double)years * year / dt;

@@ -6,6 +6,9 @@
 #include <math.h>
 #include <iostream>
 
+// This class is used to convert the cell index to the actual radius
+// Convenient when using log scale
+
 double GridGeometry::gaussian(double mu, double sigma, double x)
 {
     return 1 / (sigma * sqrt(2 * M_PI)) * exp(-0.5 * pow((x - mu) / sigma, 2));

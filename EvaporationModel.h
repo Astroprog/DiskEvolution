@@ -8,7 +8,7 @@ class EvaporationModel
 {
 public:
 	virtual ~EvaporationModel() {}
-	virtual double getLossAtRadius(const double radius) = 0;
+	virtual double getLossAtRadius(const double r, const double data, const double dt) = 0;
 };
 
 
@@ -32,6 +32,6 @@ public:
 	void setLuminosity(const double lum);
 	void setPhotoRadius(const double r);
 
-	virtual double getLossAtRadius(const double r);
+	virtual double getLossAtRadius(const double r, const double data, const double dt);
 };
 

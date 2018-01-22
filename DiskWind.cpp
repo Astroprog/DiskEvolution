@@ -123,13 +123,9 @@ void DiskWind::computedt()
 // Returns the density loss, computed by the photoevaporation model.
 // First corrections, preventing the wind to carry more mass away than available.
 double DiskWind::densityLossAtRadius(double r, int i)
-{
-        double densityLoss = photoevModel->getLossAtRadius(r);
-
-        if (densityLoss * r * dt >= data[i].y) {
-            densityLoss = data[i].y / (r * dt);
-        }
-        return 0.0;
+{      
+    double densityLoss = photoevModel->getLossAtRadius(r, data[i].y, dt);
+    return densityLoss;
 }
 
 

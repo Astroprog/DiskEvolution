@@ -25,7 +25,7 @@ DiskWind::DiskWind()
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
 
-    data = new Point[NGrid];
+    //data = new Point[NGrid];
     initialDensity = new double[NGrid];
     tempData = new double[chunksize + 1];
     windloss = new double[chunksize + 1];
@@ -45,7 +45,7 @@ DiskWind::DiskWind(int ncells)
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
 
-    data = new Point[NGrid];
+    //data = new Point[NGrid];
     initialDensity = new double[NGrid];
     tempData = new double[chunksize + 1];
     windloss = new double[NGrid + 1];
@@ -54,12 +54,10 @@ DiskWind::DiskWind(int ncells)
 
 DiskWind::~DiskWind()
 {
-    delete[](data);
     delete[](initialDensity);
     delete[](tempData);
     delete[](windloss);
     delete[](flux);
-    delete(g);
 }
 
 
@@ -126,17 +124,12 @@ void DiskWind::computedt()
 // First corrections, preventing the wind to carry more mass away than available.
 double DiskWind::densityLossAtRadius(double r, int i)
 {
-    if (r * au >= photoRadius) {
-        double soundspeed = sqrt(kb * 1e4 / (2.3 * mp));
-        double numberDensity = 5.7e4 * sqrt(luminosity / normLuminosity) * pow(photoRadius * 1e-14, -1.5) * pow(r * au / photoRadius, -2.5);
-        double densityLoss = 2 * soundspeed * numberDensity * mp;
+        double densityLoss = photoevModel->getLossAtRadius(r);
+
         if (densityLoss * r * dt >= data[i].y) {
             densityLoss = data[i].y / (r * dt);
         }
-        return densityLoss;
-    } else {
         return 0.0;
-    }
 }
 
 
@@ -576,6 +569,11 @@ void DiskWind::setParameters(double a, double mass, double lum, double rg, doubl
     viscousConstant = 3 * alpha * kb * T0 / (sqrt(au) * 2.3 * mp * sqrt(G * M));
 }
 
+void DiskWind::setEvaporationModel(EvaporationModel* model) {
+    photoevModel = model;
+}
+
+
 
 // Initializes the density distribution
 void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor)
@@ -775,10 +773,10 @@ void DiskWind::runSimulation(int years)
             step();
             double currentMass = computeDiskMass();
             if (frame % frameStride == 0) {
-                std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft
-                          << ", " << accumulatedMassLossRight << ", " << accumulatedWindLoss << std::endl;
-                std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight
-                                                                   + accumulatedWindLoss << std::endl << std::endl;
+                //std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft
+                //          << ", " << accumulatedMassLossRight << ", " << accumulatedWindLoss << std::endl;
+                //std::cout << std::setprecision(16) << "Total: " << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight
+                                                              //     + accumulatedWindLoss << std::endl << std::endl;
                 massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass << "\t"
                          << accumulatedMassLossLeft << "\t" << accumulatedMassLossRight << "\t"
                          << accumulatedWindLoss << "\t" << currentMass + accumulatedMassLossLeft +
@@ -813,11 +811,11 @@ void DiskWind::runSimulation(int years)
 
             double currentMass = computeDiskMass();
             if (frame % frameStride == 0) {
-                std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft
-                          << ", " << accumulatedMassLossRight << ", " << totalAccumulatedWindLoss << std::endl;
-                std::cout << std::setprecision(16) << "Total: "
-                          << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss
-                          << std::endl << std::endl;
+                //std::cout << std::setprecision(16) << frame << ": " << currentMass << ", " << accumulatedMassLossLeft
+                //          << ", " << accumulatedMassLossRight << ", " << totalAccumulatedWindLoss << std::endl;
+                //std::cout << std::setprecision(16) << "Total: "
+                //          << currentMass + accumulatedMassLossLeft + accumulatedMassLossRight + totalAccumulatedWindLoss
+                //          << std::endl << std::endl;
                 massFile << std::setprecision(16) << dt/year * frame << "\t" << currentMass
                          << "\t" << accumulatedMassLossLeft << "\t"
                          << accumulatedMassLossRight << "\t" << totalAccumulatedWindLoss << "\t"

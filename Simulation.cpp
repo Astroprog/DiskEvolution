@@ -8,6 +8,7 @@
 #include "Simulation.h"
 #include "ParameterParser.h"
 #include "DiskWind.h"
+#include "EvaporationModel.h"
 #include <mpi.h>
 
 
@@ -89,15 +90,21 @@ void Simulation::runOrdinarySimulation(char *parseString)
     int time = (int)pMap["time"];
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
-    DiskWind *disk = new DiskWind(NGrid);
-    disk->setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB, freezing, pfreezing);
+    EvaporationModel* model = new EvaporationClarke(luminosity, rg);    
+    DiskWind disk(NGrid);
+
+    disk.setEvaporationModel(model);
+    disk.setParameters(a, mass, luminosity, rg, lambda, frames, g, plasma, constLambda, constB, freezing, pfreezing);
 
     if (restart) {
         int restartFrame = (int)pMap["restartframe"];
-        disk->initWithRestartData(restartFrame);
-        disk->restartSimulation(restartFrame, time);
+        disk.initWithRestartData(restartFrame);
+        disk.restartSimulation(restartFrame, time);
     } else {
-        disk->initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
-        disk->runSimulation(time);
+        disk.initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
+        disk.runSimulation(time);
     }
+
+    delete g;
+    delete model;
 }

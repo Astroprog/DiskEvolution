@@ -1,8 +1,4 @@
-bin/frame*
-bin/DiskEvolution
-bin/DiskEvolusion.dSYM/*
-bin/dispersal.dat
-bin/*.dat
+bin
 .idea
 dispersal*
 run*

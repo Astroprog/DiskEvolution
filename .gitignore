@@ -1,8 +1,8 @@
-Debug/frame*
-Debug/DiskEvolution
-Debug/DiskEvolusion.dSYM/*
-Debug/dispersal.dat
-Debug/massloss.dat
+bin/frame*
+bin/DiskEvolution
+bin/DiskEvolusion.dSYM/*
+bin/dispersal.dat
+bin/*.dat
 .idea
 dispersal*
 run*

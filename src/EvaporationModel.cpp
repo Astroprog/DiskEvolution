@@ -1,4 +1,8 @@
 #include "EvaporationModel.h"
+#include <boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp>
+#include <iostream>
+#include <fstream>
 
 
 EvaporationClarke::EvaporationClarke() {
@@ -24,3 +28,43 @@ double EvaporationClarke::getLossAtRadius(const double r, const double data, con
         return 0.0;
     }
 }
+
+
+EvaporationIon100::EvaporationIon100() {}
+
+EvaporationIon100::EvaporationIon100(const std::string filename) {
+    std::ifstream instream;
+    std::string line;
+
+    instream.open(filename);
+    bool first = true;
+
+    while (std::getline(instream, line)) {
+        boost::trim(line);
+        boost::tokenizer<boost::char_separator<char>> tk(line, boost::char_separator<char>(" "));
+        for (auto i(tk.begin()); i != tk.end(); ++i) {
+            if (first) {
+                radii.push_back(std::stod(*i));
+            } else {
+                losses.push_back(std::stod(*i));
+            }
+        }
+        first = false;
+    }
+
+    double step = radii[1] - radii[0];
+    spline = boost::math::cubic_b_spline<double>(losses.begin(), losses.end(), radii[0], step);
+}
+
+double EvaporationIon100::getLossAtRadius(const double r, const double data, const double dt) {
+    double densityLoss = spline(r);
+    if (densityLoss * r * dt >= data) {
+        densityLoss = data / (r * dt);
+    }
+    return densityLoss;
+}
+
+
+
+
+

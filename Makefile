@@ -1,5 +1,5 @@
 CC = mpicxx-openmpi-mp
-LDFLAGS = 
+LDFLAGS = -O3 -std=c++11
 CCLAGS = -O3 -std=c++11 
 
 # -I/opt/local/include/openmpi-mp
@@ -7,6 +7,7 @@ CCLAGS = -O3 -std=c++11
 
 CCFLAGS += `pkg-config --cflags ompi`
 LDFLAGS += `pkg-config --libs ompi`
+LDFLAGS += -L/opt/local/lib -I/opt/local/include 
 
 EXECUTABLE = bin/DiskEvolution
 SOURCES = $(wildcard */*.cpp)

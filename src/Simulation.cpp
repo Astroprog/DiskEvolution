@@ -5,11 +5,13 @@
 
 #include <vector>
 #include <iostream>
+#include <string>
+#include <mpi.h>
+
 #include "Simulation.h"
 #include "ParameterParser.h"
 #include "DiskWind.h"
 #include "EvaporationModel.h"
-#include <mpi.h>
 
 
 void Simulation::runDiskDispersalAnalysis(char* parseString)
@@ -90,7 +92,9 @@ void Simulation::runOrdinarySimulation(char *parseString)
     int time = (int)pMap["time"];
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
-    EvaporationModel* model = new EvaporationClarke(luminosity, rg);    
+    // EvaporationModel* model = new EvaporationClarke(luminosity, rg);    
+    const std::string path = "surfaceLoss.dat";
+    EvaporationModel* model = new EvaporationIon100(path);
     DiskWind disk(NGrid);
 
     disk.setEvaporationModel(model);

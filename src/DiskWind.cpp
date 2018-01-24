@@ -25,7 +25,6 @@ DiskWind::DiskWind()
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
 
-    //data = new Point[NGrid];
     initialDensity = new double[NGrid];
     tempData = new double[chunksize + 1];
     windloss = new double[chunksize + 1];
@@ -45,7 +44,6 @@ DiskWind::DiskWind(int ncells)
     const int processors = MPI::COMM_WORLD.Get_size();
     const int chunksize = NGrid / processors;
 
-    //data = new Point[NGrid];
     initialDensity = new double[NGrid];
     tempData = new double[chunksize + 1];
     windloss = new double[NGrid + 1];

@@ -25,7 +25,7 @@ private:
     enum mpiTag {initSendLow, initSendHigh, finalRecvLow, finalRecvHigh, frameRecv, frameBRecv,
         frameMDotRecv, dispersalSend, massLossRight, totalWindloss};
 
-    const double au = 1.495978707e13;
+    const double au = 1.495978707e13; 
     const double G = 6.67408e-8;
     const double kb = 1.38064852e-16;
     const double mp = 1.672621898e-24;

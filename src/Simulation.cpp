@@ -92,9 +92,9 @@ void Simulation::runOrdinarySimulation(char *parseString)
     int time = (int)pMap["time"];
 
     GridGeometry *g = new GridGeometry(rin, rout, NGrid, logscale);
-    // EvaporationModel* model = new EvaporationClarke(luminosity, rg);    
-    const std::string path = "surfaceLoss.dat";
-    EvaporationModel* model = new EvaporationIon100(path);
+    EvaporationModel* model = new EvaporationClarke(luminosity, rg);    
+    //const std::string path = "surfaceLoss.dat";
+    //EvaporationModel* model = new EvaporationIon100(path);
     DiskWind disk(NGrid);
 
     disk.setEvaporationModel(model);
@@ -105,7 +105,8 @@ void Simulation::runOrdinarySimulation(char *parseString)
         disk.initWithRestartData(restartFrame);
         disk.restartSimulation(restartFrame, time);
     } else {
-        disk.initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
+        //disk.initWithHCGADensityDistribution(initialDiskMassRatio * mass, radialScaleFactor, floorDensity);
+        disk.initWithCustomDensityDistribution(80.0, 5.2, 20.0, 0.9, floorDensity);
         disk.runSimulation(time);
     }
 

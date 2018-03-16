@@ -94,6 +94,7 @@ public:
                        GridGeometry *geometry, double plasmaParameter, bool constlambda, bool constb, bool freezing, bool pfreezing);
     void setEvaporationModel(EvaporationModel* model);
     void initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor);
+    void initWithCustomDensityDistribution(double sigma0, double r0, double r_char, double slope, double floor);
 
     void runSimulation(int years);
     void runDispersalAnalysis(int timeLimit, std::vector<double>* parameters, const std::string parameterType);

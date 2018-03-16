@@ -17,6 +17,23 @@ def loadFrame(fileName):
     data = pd.read_csv(fileName, delimiter=" ", header=None, skiprows=1)
     return data[0].values, data[1].values, time
 
+def plotEvolution(path):
+    fig = plt.figure(figsize=(12, 8))
+    plt.ylim([1e-3, 1e4])
+    plt.xlim([1e-3, 1e3])
+
+    files = os.listdir(path)
+    files = sorted([f for f in files if f.startswith("frame")], key=lambda f: int(os.path.splitext(f)[0][5:]))
+
+    for file in files:
+        print("Processing data: " + file)
+        x, y, t = loadFrame(file)
+        plt.loglog(x, y, linewidth=0.5, color='b')
+        plt.xlabel("Radius [AU]")
+        plt.ylabel("Column Density [g / cm^2]")
+
+    plt.savefig("density_evolution.eps")    
+
 def plotForVideo(path):
 
     FFMpegWriter = manimation.writers['ffmpeg']  
@@ -46,4 +63,4 @@ def plotForVideo(path):
             #plt.ylabel("Surface Density [g / cm^2]")
             # plt.show()
 
-plotForVideo("./")
+plotEvolution("./")

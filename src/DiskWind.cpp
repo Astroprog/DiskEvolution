@@ -568,6 +568,55 @@ void DiskWind::setEvaporationModel(EvaporationModel* model) {
 }
 
 
+void DiskWind::initWithCustomDensityDistribution(double sigma0, double r0, double r_char, double slope, double floor)
+{
+    std::cout << "Initializing grid of size " << NGrid << " with custom distribution" << std::endl;
+
+    computedx();
+    computedt();
+
+    floorDensity = floor;
+
+    for (int i = 0; i < NGrid; i++) {
+        data[i].x = g->convertIndexToPosition(i);
+        data[i].y = sigma0 * pow(data[i].x / r0, -slope) * exp(-pow(data[i].x / r_char, 2.0 - slope)) * data[i].x;
+        if (data[i].y / data[i].x < floorDensity) {
+            data[i].y = floorDensity * data[i].x;
+        }
+        data[i].mdot = 0.0;
+
+        double soundSpeed = sqrt(kb * T0 / (2.3 * mp * sqrt(data[i].x)));
+        double scaleHeight = soundSpeed / sqrt(G*M/pow(data[i].x * au, 3));
+        double midplaneDensity = data[i].y / data[i].x / (sqrt(2 * M_PI) * scaleHeight);
+        double B2 = 8 * M_PI * midplaneDensity * soundSpeed * soundSpeed / plasma;
+        data[i].B2 = B2;
+
+        if (perfectFluxFreezing)
+        {
+            // At R_g AU the value of reference is set
+            if (i == 68) {
+                freezingPlasma = midplaneDensity * midplaneDensity / B2;
+                std::cout << sqrt(B2) << std::endl;
+                std::cout << "freezing Plasma: " << midplaneDensity / freezingPlasma << std::endl;
+            }
+        }
+
+        if (fluxFreezing) {
+            initialDensity[i] = data[i].y / data[i].x;
+        }
+    }
+
+    if (perfectFluxFreezing)
+    {
+        for (int i = 0; i < NGrid; i++) {
+            data[i].B2 = getUpdatedMagneticFluxDensityAtCell(i);
+        }
+
+    }
+
+    determineDiskExtent();
+    writeFrame();
+}
 
 // Initializes the density distribution
 void DiskWind::initWithHCGADensityDistribution(double initialDiskMass, double radialScaleFactor, double floor)
